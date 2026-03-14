@@ -287,6 +287,7 @@ function buildAllPages(tpl, d) {
 async function generateSiteZip() {
   const name = sgV('sgName');
   if (!name) { showToast('⚠️ 업체명을 입력하세요.', 'error'); return; }
+  if (!validateRequired()) return;
 
   if (typeof JSZip === 'undefined') {
     showToast('⚠️ JSZip 로딩 중... 잠시 후 다시 시도하세요.', 'error');
@@ -370,6 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function deployToCloudflare() {
   const name = sgV('sgName');
   if (!name) { showToast('⚠️ 업체명을 입력하세요.', 'error'); return; }
+  if (!validateRequired()) return;
 
   if (typeof JSZip === 'undefined') { showToast('⚠️ JSZip 로딩 중...', 'error'); return; }
 
@@ -560,4 +562,38 @@ function buildFontSizeCss(d) {
   --fs-review:  ${d.fsReview  || 15}px;
   --fs-footer:  ${d.fsFooter  || 13}px;
 }`;
+}
+
+// ── 필수 항목 유효성 검사 ──
+function validateRequired() {
+  const required = [
+    { id: 'sgName',    label: '업체명' },
+    { id: 'sgPhone',   label: '전화번호' },
+    { id: 'sgAddress', label: '주소' },
+    { id: 'sgH1Title', label: '히어로 제목 1' },
+    { id: 'sgH2Title', label: '히어로 제목 2' },
+    { id: 'sgH3Title', label: '히어로 제목 3' },
+    { id: 'sgP1Name',  label: '프로그램/메뉴 이름 1' },
+    { id: 'sgP2Name',  label: '프로그램/메뉴 이름 2' },
+    { id: 'sgP3Name',  label: '프로그램/메뉴 이름 3' },
+  ];
+
+  const empty = required.filter(f => !sgV(f.id));
+
+  if (empty.length > 0) {
+    const labels = empty.map(f => f.label).join(', ');
+    showToast('⚠️ 필수 항목을 입력하세요: ' + labels, 'error');
+
+    // 첫 번째 빈 항목으로 스크롤 + 강조
+    const firstEl = document.getElementById(empty[0].id);
+    if (firstEl) {
+      firstEl.style.borderColor = 'var(--red)';
+      firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstEl.focus();
+      // 3초 후 원래 색상 복구
+      setTimeout(() => { firstEl.style.borderColor = ''; }, 3000);
+    }
+    return false;
+  }
+  return true;
 }

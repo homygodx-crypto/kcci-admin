@@ -110,14 +110,14 @@
             </div>
           </div>
           <div class="fg-row">
-            <div class="fg"><label>업체명 *</label><input type="text" id="sgName" placeholder="예) 소예 필라테스 평생교육원"></div>
+            <div class="fg"><label>업체명 <span style="color:var(--red)">*</span></label><input type="text" id="sgName" placeholder="예) 소예 필라테스 평생교육원"></div>
             <div class="fg"><label>영문 브랜드명</label><input type="text" id="sgNameEn" placeholder="예) SOYAE PILATES"></div>
           </div>
           <div class="fg-row">
             <div class="fg"><label>사장님 / 대표자</label><input type="text" id="sgOwner" placeholder="예) 박효미 원장"></div>
-            <div class="fg"><label>전화번호 *</label><input type="text" id="sgPhone" placeholder="예) 0507-1359-9879"></div>
+            <div class="fg"><label>전화번호 <span style="color:var(--red)">*</span></label><input type="text" id="sgPhone" placeholder="예) 0507-1359-9879"></div>
           </div>
-          <div class="fg"><label>주소 *</label><input type="text" id="sgAddress" placeholder="예) 경기 고양시 일산동구 위시티로 55, 2층 103호"></div>
+          <div class="fg"><label>주소 <span style="color:var(--red)">*</span></label><input type="text" id="sgAddress" placeholder="예) 경기 고양시 일산동구 위시티로 55, 2층 103호"></div>
           <div class="fg-row">
             <div class="fg"><label>네이버 지도 Place ID</label><input type="text" id="sgPlaceId" placeholder="예) 1432185533" style="font-family:monospace;font-size:12px"></div>
             <div class="fg"><label>홈페이지 URL (예정)</label><input type="text" id="sgUrl" placeholder="예) soyae.pages.dev"></div>
@@ -142,7 +142,7 @@
                 </label>
               </div>
               <div id="sgH1Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgH1Img_previewImg"></div></div>
-            <div class="fg"><label>메인 제목 (|로 줄바꿈)</label><input type="text" id="sgH1Title" placeholder="예) 신경계 발달|실전 필라테스"></div>
+            <div class="fg"><label>메인 제목 (|로 줄바꿈) <span style="color:var(--red)">*</span></label><input type="text" id="sgH1Title" placeholder="예) 신경계 발달|실전 필라테스"></div>
           </div>
           <div class="fg-row" style="margin-bottom:12px">
             <div class="fg"><label>슬라이드 2 이미지 URL</label><div style="display:flex;gap:6px;align-items:center">
@@ -181,7 +181,7 @@
               </div>
               <div id="sgP1Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgP1Img_previewImg"></div></div>
               <div class="fg"><label>태그</label><input type="text" id="sgP1Tag" placeholder="예) PRIVATE CLASS"></div>
-              <div class="fg"><label>이름</label><input type="text" id="sgP1Name" placeholder="예) 1:1 프라이빗"></div>
+              <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label><input type="text" id="sgP1Name" placeholder="예) 1:1 프라이빗"></div>
               <div class="fg"><label>한 줄 설명</label><textarea id="sgP1Desc" style="min-height:52px"></textarea></div>
               <div class="fg"><label>상세 설명</label><textarea id="sgP1Detail"></textarea></div>
             </div>
@@ -194,7 +194,7 @@
               </div>
               <div id="sgP2Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgP2Img_previewImg"></div></div>
               <div class="fg"><label>태그</label><input type="text" id="sgP2Tag"></div>
-              <div class="fg"><label>이름</label><input type="text" id="sgP2Name"></div>
+              <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label><input type="text" id="sgP2Name"></div>
               <div class="fg"><label>한 줄 설명</label><textarea id="sgP2Desc" style="min-height:52px"></textarea></div>
               <div class="fg"><label>상세 설명</label><textarea id="sgP2Detail"></textarea></div>
             </div>
@@ -207,7 +207,7 @@
               </div>
               <div id="sgP3Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgP3Img_previewImg"></div></div>
               <div class="fg"><label>태그</label><input type="text" id="sgP3Tag"></div>
-              <div class="fg"><label>이름</label><input type="text" id="sgP3Name"></div>
+              <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label><input type="text" id="sgP3Name"></div>
               <div class="fg"><label>한 줄 설명</label><textarea id="sgP3Desc" style="min-height:52px"></textarea></div>
               <div class="fg"><label>상세 설명</label><textarea id="sgP3Detail"></textarea></div>
             </div>
@@ -390,6 +390,10 @@
         </div>
       </div>
 
+      <!-- 필수 안내 -->
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
+        <span style="color:var(--red)">*</span> 표시 항목은 필수 입력 사항입니다.
+      </div>
       <!-- 생성 버튼 -->
       <div class="progress-bar"><div class="progress-fill" id="sgProgress"></div></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
