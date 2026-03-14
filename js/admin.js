@@ -8,7 +8,7 @@ const ADMIN_SUPABASE_URL = 'https://vugtupipbpfundipgcqc.supabase.co';
 const ADMIN_SUPABASE_KEY = 'sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S';
 const ADMIN_BUCKET = 'site-images';
 
-function buildAdminHtml(d) {
+function buildAdminHtml_common(d) {
   const siteName = d.name || '업체';
   const adminId = d.adminId || 'admin';
   const adminPw = d.adminPw || '1234';

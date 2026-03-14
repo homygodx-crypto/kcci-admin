@@ -413,17 +413,7 @@ async function generateSiteZip() {
 
 // ── admin.html 생성 ──
 function buildAdminHtml(d) {
-  const tpl = d.industry || 'general';
-  const adminBuilders = {
-    pilates: buildPilatesAdminHtml,
-    cafe:    buildCafeAdminHtml,
-    beauty:  buildBeautyAdminHtml,
-    medical: buildMedicalAdminHtml,
-    academy: buildAcademyAdminHtml,
-    general: buildGeneralAdminHtml,
-  };
-  const builder = adminBuilders[tpl] || buildGeneralAdminHtml;
-  return builder(d);
+  return buildAdminHtml_common(d);
 }
 
 // ── 업체 목록 셀렉트 채우기 ──
