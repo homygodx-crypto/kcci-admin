@@ -175,12 +175,14 @@ function openSgPreview() {
 
   _pvPages = buildAllPages(tpl, d);
 
-  // 탭 생성
+  // 탭 생성 (admin.html 제외)
   const tabEl = document.getElementById('pvPageTabs');
-  tabEl.innerHTML = Object.keys(_pvPages).map(p =>
-    `<button onclick="pvLoadPage('${p}')" id="pvTab_${p.replace('.','_')}"
-     style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;">${p}</button>`
-  ).join('');
+  tabEl.innerHTML = Object.keys(_pvPages)
+    .filter(p => p !== 'admin.html')
+    .map(p =>
+      `<button onclick="pvLoadPage('${p}')" id="pvTab_${p.replace('.','_')}"
+       style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;">${p}</button>`
+    ).join('');
 
   pvLoadPage('index.html');
   document.getElementById('previewModal').style.display = 'flex';

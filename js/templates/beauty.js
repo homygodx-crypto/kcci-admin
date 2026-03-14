@@ -6,8 +6,8 @@
 
 function beautyCss(d) {
   return `
-${buildFontSizeCss(d)}
 @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+${buildFontSizeCss(d)}
 *{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
 body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#1a0f14;overflow-x:hidden;}
 :root{--bg:#fff;--warm:#fdf5f6;--mid:#f8eef0;--rose:#c9808a;--rose2:#e8a0aa;--dark:#1a0f14;--gray:#7a5a62;--bd:rgba(201,128,138,0.18);}

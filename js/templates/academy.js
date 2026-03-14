@@ -6,8 +6,8 @@
 
 function academyCss(d) {
   return `
-${buildFontSizeCss(d)}
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+${buildFontSizeCss(d)}
 *{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
 body{font-family:'Noto Sans KR',sans-serif;background:#f4f6fa;color:#0f1b2d;overflow-x:hidden;}
 :root{--bg:#f4f6fa;--white:#ffffff;--navy:#0f1b2d;--blue:#1a3a6b;--sky:#2563eb;--yellow:#fbbf24;--yellow2:#f59e0b;--bd:rgba(15,27,45,0.1);}

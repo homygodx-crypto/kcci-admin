@@ -6,8 +6,8 @@
 
 function pilatesCss(d) {
   return `
-${buildFontSizeCss(d)}
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+${buildFontSizeCss(d)}
 *{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
 body{font-family:'Noto Sans KR',sans-serif;background:#f9f6f0;color:#1a1410;overflow-x:hidden;}
 :root{--bg:#f9f6f0;--warm:#f2ece0;--card:#fff;--navy:#1a1410;--gold:#B8902A;--gold2:#d4a83e;--cream:#1a1410;--gray:#6b5c4a;--border:rgba(184,144,42,0.2);}

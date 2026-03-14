@@ -6,8 +6,8 @@
 
 function medicalCss(d) {
   return `
-${buildFontSizeCss(d)}
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+${buildFontSizeCss(d)}
 *{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
 body{font-family:'Noto Sans KR',sans-serif;background:#f8f6f0;color:#2a2a22;overflow-x:hidden;}
 :root{--bg:#f8f6f0;--warm:#f0ece0;--green:#2d5a3d;--green2:#3d7a52;--beige:#e8e0cc;--dark:#2a2a22;--bd:rgba(45,90,61,0.15);}

@@ -6,8 +6,8 @@
 
 function cafeCss(d) {
   return `
-${buildFontSizeCss(d)}
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+${buildFontSizeCss(d)}
 *{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
 body{font-family:'Noto Sans KR',sans-serif;background:#faf8f3;color:#2d2215;overflow-x:hidden;}
 :root{--cream:#faf8f3;--warm:#f5efe0;--brown:#5c3317;--terra:#c0553a;--gold:#d4915a;--dark:#2d2215;--bd:rgba(92,51,23,0.14);}

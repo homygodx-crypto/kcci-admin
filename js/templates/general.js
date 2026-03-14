@@ -6,8 +6,8 @@
 
 function generalCss(d) {
   return `
-${buildFontSizeCss(d)}
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+${buildFontSizeCss(d)}
 *{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
 body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0d1b36;overflow-x:hidden;}
 :root{--white:#fff;--bg:#f8f9fc;--navy:#0d1b36;--blue:#1d4ed8;--orange:#f97316;--orange2:#ea580c;--gray:#64748b;--bd:rgba(13,27,54,0.1);}
