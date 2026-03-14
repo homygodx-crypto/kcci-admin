@@ -22,7 +22,7 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: 'files required' }), { status: 400, headers: cors });
     }
 
-    // 프로젝트 없으면 생성
+    // 1. 프로젝트 없으면 생성
     const checkRes = await fetch(
       'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/projects/' + projectName,
       { headers: { 'Authorization': 'Bearer ' + CF_TOKEN } }
@@ -38,34 +38,87 @@ export async function onRequestPost(context) {
         }
       );
       if (!createRes.ok) {
-        const e = await createRes.json();
+        const e = await createRes.json().catch(() => ({}));
         return new Response(
           JSON.stringify({ error: 'Project create failed: ' + (e.errors?.[0]?.message || createRes.status) }),
           { status: 500, headers: cors }
         );
       }
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 2000));
     }
 
-    // FormData로 파일 업로드
-    const formData = new FormData();
-    const manifest = {};
+    // 2. 각 파일 해시 계산
     const encoder = new TextEncoder();
+    const fileHashes = {};
+    const fileBytes = {};
 
     for (const [filename, content] of Object.entries(files)) {
       const bytes = encoder.encode(content);
+      fileBytes[filename] = bytes;
       const hash = await sha256hex(bytes);
-      manifest['/' + filename] = hash;
-      formData.append('files', new Blob([bytes], { type: getContentType(filename) + ';charset=utf-8' }), filename);
+      fileHashes[filename] = hash;
     }
-    formData.append('manifest', JSON.stringify(manifest));
 
+    // 3. 필요한 파일 목록 확인 (어떤 파일을 업로드해야 하는지)
+    const manifest = {};
+    for (const [filename, hash] of Object.entries(fileHashes)) {
+      manifest['/' + filename] = hash;
+    }
+
+    const missingRes = await fetch(
+      'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/assets/check-missing',
+      {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + CF_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hashes: Object.values(fileHashes) }),
+      }
+    );
+
+    let missingHashes = Object.values(fileHashes); // 기본: 전부 업로드
+    if (missingRes.ok) {
+      const missingData = await missingRes.json();
+      missingHashes = missingData.result || missingHashes;
+    }
+
+    // 4. 누락된 파일 업로드
+    if (missingHashes.length > 0) {
+      const hashToFile = {};
+      for (const [filename, hash] of Object.entries(fileHashes)) {
+        hashToFile[hash] = { filename, bytes: fileBytes[filename] };
+      }
+
+      const formData = new FormData();
+      for (const hash of missingHashes) {
+        const fileInfo = hashToFile[hash];
+        if (!fileInfo) continue;
+        formData.append(hash, new Blob([fileInfo.bytes], { type: getContentType(fileInfo.filename) }), fileInfo.filename);
+      }
+
+      const uploadRes = await fetch(
+        'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/assets/upload',
+        {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + CF_TOKEN },
+          body: formData,
+        }
+      );
+
+      if (!uploadRes.ok) {
+        const e = await uploadRes.json().catch(() => ({}));
+        return new Response(
+          JSON.stringify({ error: 'File upload failed: ' + (e.errors?.[0]?.message || uploadRes.status) }),
+          { status: 500, headers: cors }
+        );
+      }
+    }
+
+    // 5. 배포 생성
     const deployRes = await fetch(
       'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/projects/' + projectName + '/deployments',
       {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + CF_TOKEN },
-        body: formData,
+        headers: { 'Authorization': 'Bearer ' + CF_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manifest }),
       }
     );
 
@@ -74,17 +127,14 @@ export async function onRequestPost(context) {
     try { deployData = JSON.parse(deployText); } catch(e) { deployData = {}; }
 
     if (!deployRes.ok) {
-      return new Response(
-        JSON.stringify({ error: 'Deploy failed: ' + (deployData.errors?.[0]?.message || deployRes.status) }),
-        { status: 500, headers: cors }
-      );
+      // V2 API 실패시 V1 FormData 방식으로 폴백
+      return await deployV1(CF_TOKEN, CF_ACCOUNT, projectName, files, cors);
     }
 
     return new Response(JSON.stringify({
       success: true,
       url: 'https://' + projectName + '.pages.dev',
       projectName: projectName,
-      deploymentId: deployData.result ? deployData.result.id : null,
     }), { status: 200, headers: cors });
 
   } catch(err) {
@@ -93,6 +143,44 @@ export async function onRequestPost(context) {
       { status: 500, headers: cors }
     );
   }
+}
+
+// V1 폴백 — FormData 방식
+async function deployV1(CF_TOKEN, CF_ACCOUNT, projectName, files, cors) {
+  const encoder = new TextEncoder();
+  const formData = new FormData();
+  const manifest = {};
+
+  for (const [filename, content] of Object.entries(files)) {
+    const bytes = encoder.encode(content);
+    const hash = await sha256hex(bytes);
+    manifest['/' + filename] = hash;
+    formData.append('files', new Blob([bytes], { type: getContentType(filename) }), filename);
+  }
+  formData.append('manifest', JSON.stringify(manifest));
+
+  const res = await fetch(
+    'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/projects/' + projectName + '/deployments',
+    {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + CF_TOKEN },
+      body: formData,
+    }
+  );
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return new Response(
+      JSON.stringify({ error: 'Deploy failed: ' + (data.errors?.[0]?.message || res.status) }),
+      { status: 500, headers: cors }
+    );
+  }
+
+  return new Response(JSON.stringify({
+    success: true,
+    url: 'https://' + projectName + '.pages.dev',
+    projectName: projectName,
+  }), { status: 200, headers: cors });
 }
 
 export async function onRequestOptions() {
@@ -107,7 +195,7 @@ export async function onRequestOptions() {
 }
 
 function getContentType(f) {
-  const ext = f.split('.').pop().toLowerCase();
+  const ext = (f || '').split('.').pop().toLowerCase();
   const map = { html: 'text/html', css: 'text/css', js: 'application/javascript', json: 'application/json' };
   return map[ext] || 'text/plain';
 }
@@ -116,5 +204,5 @@ async function sha256hex(buf) {
   const hash = await crypto.subtle.digest('SHA-256', buf);
   return Array.from(new Uint8Array(hash)).map(function(b) {
     return b.toString(16).padStart(2, '0');
-  }).join('').substring(0, 32);
+  }).join('');
 }

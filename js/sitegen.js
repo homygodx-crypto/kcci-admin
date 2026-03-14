@@ -487,7 +487,7 @@ async function deployToCloudflare() {
         .trim();
     }
 
-    // 파일 객체 생성
+    // 파일 객체 생성 — 문자열 그대로 전송 (deploy.js에서 인코딩)
     const files = {};
     for (const [filename, html] of Object.entries(pages)) {
       files[filename] = filename.endsWith('.html') ? minifyHtml(html) : html;
