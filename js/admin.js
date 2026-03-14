@@ -23,7 +23,7 @@ function buildAdminHtml_common(d) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>관리자 | ${siteName}</title>
+<title>사장님 페이지 | ${siteName}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Apple SD Gothic Neo','맑은 고딕',sans-serif;background:#f0f2f5;color:#222;}
@@ -31,7 +31,7 @@ body{font-family:'Apple SD Gothic Neo','맑은 고딕',sans-serif;background:#f0
 
 .login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);}
 .login-box{background:#fff;width:380px;padding:52px 44px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
-.login-brand{font-size:12px;letter-spacing:.3em;color:var(--gold);margin-bottom:8px;}
+.login-brand{font-size:12px;letter-spacing:.3em;color:var(--gold);margin-bottom:8px;text-transform:uppercase;}
 .login-title{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:32px;}
 .lf{margin-bottom:18px;}
 .lf label{display:block;font-size:13px;color:#888;margin-bottom:6px;}
@@ -139,7 +139,7 @@ body{font-family:'Apple SD Gothic Neo','맑은 고딕',sans-serif;background:#f0
 <div class="login-page" id="loginPage">
   <div class="login-box">
     <div class="login-brand">${siteName.toUpperCase()}</div>
-    <div class="login-title">관리자 로그인</div>
+    <div class="login-title">사장님 페이지</div>
     <div class="lf"><label>아이디</label><input type="text" id="loginId" placeholder="아이디" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="lf"><label>비밀번호</label><input type="password" id="loginPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="login-err" id="loginErr">아이디 또는 비밀번호가 올바르지 않습니다.</div>
@@ -151,7 +151,7 @@ body{font-family:'Apple SD Gothic Neo','맑은 고딕',sans-serif;background:#f0
   <div class="sidebar">
     <div class="sb-logo">
       <div class="sb-logo-name">${siteName}</div>
-      <div class="sb-logo-sub">관리자 페이지</div>
+      <div class="sb-logo-sub">사장님 페이지</div>
     </div>
     <div class="sb-menu">
       <div class="sb-section">관리 메뉴</div>

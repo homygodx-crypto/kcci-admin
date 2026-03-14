@@ -143,6 +143,7 @@ function academyHeader(d, activePage) {
   </a>
   <nav>${nav}</nav>
   <a href="reservation.html" class="header-cta">무료 상담</a>
+  <a href="admin.html" class="owner-login-btn">로그인</a>
   <button class="hamburger" id="hamBtn" onclick="toggleNav()"><span></span><span></span><span></span></button>
 </header>
 <div class="mobile-nav" id="mobileNav">
@@ -286,6 +287,7 @@ ${d.placeId ? `
 ` : ''}
 ${academyFooter(d)}
 <script>${academyJs(d)}<\/script>
+
 </body>
 </html>`;
 }
@@ -332,6 +334,7 @@ ${academyHeader(d,'course')}
 </div>
 ${academyFooter(d)}
 <script>${academyJs(d)}<\/script>
+
 </body>
 </html>`;
 }
@@ -376,6 +379,7 @@ function closeLb(){document.getElementById('lb').classList.remove('open');}
 function lbMove(d){lbIdx=(lbIdx+d+lbSrcs.length)%lbSrcs.length;document.getElementById('lbImg').src=lbSrcs[lbIdx];}
 document.addEventListener('keydown',function(e){if(document.getElementById('lb').classList.contains('open')){if(e.key==='ArrowLeft')lbMove(-1);if(e.key==='ArrowRight')lbMove(1);if(e.key==='Escape')closeLb();}});
 <\/script>
+
 </body>
 </html>`;
 }
@@ -423,6 +427,7 @@ ${academyHeader(d,'location')}
 </div>
 ${academyFooter(d)}
 <script>${academyJs(d)}<\/script>
+
 </body>
 </html>`;
 }

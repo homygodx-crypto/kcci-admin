@@ -298,8 +298,8 @@ function setPvSize(w) {
 function buildAllPages(tpl, d) {
   const builders = {
     pilates: {
-      'index.html': () => buildPilatesIndexHtml(d, titleHtml),
-      'program.html': () => buildPilatesProgramHtml(d, certList),
+      'index.html': () => buildPilatesIndexHtml(d),
+      'program.html': () => buildPilatesProgramHtml(d),
       'gallery.html': () => buildPilatesGalleryHtml(d),
       'location.html': () => buildPilatesLocationHtml(d),
     },
@@ -310,13 +310,13 @@ function buildAllPages(tpl, d) {
       'location.html': () => buildCafeLocationHtml(d),
     },
     beauty: {
-      'index.html': () => buildBeautyIndexHtml(d, titleHtml),
+      'index.html': () => buildBeautyIndexHtml(d),
       'service.html': () => buildBeautyServiceHtml(d),
       'gallery.html': () => buildBeautyGalleryHtml(d),
       'location.html': () => buildBeautyLocationHtml(d),
     },
     medical: {
-      'index.html': () => buildMedicalIndexHtml(d, titleHtml),
+      'index.html': () => buildMedicalIndexHtml(d),
       'treatment.html': () => buildMedicalTreatmentHtml(d),
       'gallery.html': () => buildMedicalGalleryHtml(d),
       'location.html': () => buildMedicalLocationHtml(d),
