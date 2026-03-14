@@ -214,14 +214,15 @@ let lbArr=[],lbI=0;
 function openLb(i,arr){lbArr=arr||lbArr;lbI=i;document.getElementById('lbImg').src=lbArr[i];document.getElementById('lb').classList.add('open');}
 function closeLb(){document.getElementById('lb').classList.remove('open');}
 function lbMv(d){lbI=(lbI+d+lbArr.length)%lbArr.length;document.getElementById('lbImg').src=lbArr[lbI];}
-document.getElementById('lb').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLb();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();if(e.key==='ArrowRight')lbMv(1);if(e.key==='ArrowLeft')lbMv(-1);});
-window.addEventListener('scroll',()=>{document.getElementById('floating').classList.toggle('show',scrollY>300);});
+document.getElementById('lb').addEventListener('click',function(e){if(e.target===e.currentTarget)closeLb();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();if(e.key==='ArrowRight')lbMv(1);if(e.key==='ArrowLeft')lbMv(-1);});
+window.addEventListener('scroll',function(){document.getElementById('floating').classList.toggle('show',scrollY>300);});
 function toggleNav(){document.getElementById('hamBtn').classList.toggle('open');document.getElementById('mobileNav').classList.toggle('open');}
-document.addEventListener('click',e=>{const b=document.getElementById('hamBtn'),n=document.getElementById('mobileNav');if(b&&n&&!b.contains(e.target)&&!n.contains(e.target)){b.classList.remove('open');n.classList.remove('open');}});
-// 방문자 기록
-try{recordVisit(location.pathname.split('/').pop()||'index.html');}catch(e){}`;
+document.addEventListener('click',function(e){var b=document.getElementById('hamBtn'),n=document.getElementById('mobileNav');if(b&&n&&!b.contains(e.target)&&!n.contains(e.target)){b.classList.remove('open');n.classList.remove('open');}});
+try{if(typeof recordVisit==='function')recordVisit(location.pathname.split('/').pop()||'index.html');}catch(e){}
+`;
 }
+
 
 function buildNaverPlaceWidget(d) {
   if (!d.placeId) return '';
