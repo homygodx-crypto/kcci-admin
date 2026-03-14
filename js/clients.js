@@ -368,15 +368,68 @@ function saveDomain(id) {
 }
 
 // ── 홈페이지 삭제 ──
-function deleteSite(id) {
+async function deleteSite(id) {
   const client = clients.find(x => x.id === id);
-  if (!client) return;
-  if (!confirm(`'${client.name}' 홈페이지 URL을 삭제할까요?\n(Cloudflare Pages 프로젝트는 직접 삭제해야 합니다)`)) return;
-  const idx = clients.findIndex(x => x.id === id);
-  if (idx !== -1) {
-    clients[idx].url = '';
-    saveClients(clients);
+  if (!client || !client.url) return;
+
+  const siteUrl = client.url.startsWith('http') ? client.url : 'https://' + client.url;
+  const projectName = siteUrl.replace(/^https?:\/\//, '').replace('.pages.dev', '').replace(/\/.*/,'').trim();
+
+  if (!confirm(`'${client.name}' 홈페이지를 완전히 삭제할까요?\n\n- Cloudflare Pages 프로젝트 삭제\n- GitHub 파일 삭제\n- URL 초기화\n\n⚠️ 되돌릴 수 없습니다.`)) return;
+
+  showToast('🗑 삭제 중...');
+
+  try {
+    // ① Cloudflare Pages 프로젝트 삭제
+    const cfRes = await fetch('/api/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectName }),
+    });
+    const cfData = await cfRes.json();
+    if (!cfRes.ok && !cfData.alreadyGone) {
+      throw new Error('Cloudflare 삭제 실패: ' + (cfData.error || cfRes.status));
+    }
+
+    // ② GitHub 파일 삭제
+    const ghToken = localStorage.getItem('kcci_gh_token');
+    const ghRepo = localStorage.getItem('kcci_gh_repo') || 'homygodx-crypto/kcci-admin';
+    if (ghToken && projectName) {
+      const sitePath = 'sites/' + projectName;
+      const apiBase = `https://api.github.com/repos/${ghRepo}/contents/${sitePath}`;
+      const headers = {
+        'Authorization': 'Bearer ' + ghToken,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+      };
+      // 폴더 내 파일 목록 가져오기
+      try {
+        const listRes = await fetch(apiBase, { headers });
+        if (listRes.ok) {
+          const files = await listRes.json();
+          if (Array.isArray(files)) {
+            for (const file of files) {
+              await fetch(file.url, {
+                method: 'DELETE',
+                headers,
+                body: JSON.stringify({ message: `Delete ${projectName} - ${file.name}`, sha: file.sha }),
+              });
+            }
+          }
+        }
+      } catch(e) { console.warn('GitHub 파일 삭제 실패 (무시):', e); }
+    }
+
+    // ③ 업체 URL 초기화
+    const idx = clients.findIndex(x => x.id === id);
+    if (idx !== -1) {
+      clients[idx].url = '';
+      saveClients(clients);
+    }
     renderClients();
-    showToast('✅ 홈페이지 URL 삭제 완료', 'success');
+    showToast('✅ 홈페이지 삭제 완료');
+
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
   }
 }
