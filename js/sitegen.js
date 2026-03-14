@@ -493,7 +493,7 @@ async function deployToCloudflare() {
       files[filename] = filename.endsWith('.html') ? minifyHtml(html) : html;
     }
 
-    setStatus('🌐 Cloudflare에 배포 중... (30초~1분 소요)', 'var(--amber)');
+    setStatus('🌐 Cloudflare Workers에 배포 중...', 'var(--amber)');
 
     // 파일을 UTF-8 → base64 변환
     function utf8ToBase64(str) {
@@ -503,30 +503,22 @@ async function deployToCloudflare() {
       return btoa(binary);
     }
 
-    // 파일을 한 개씩 순서대로 배포 (크기 제한 우회)
-    const fileEntries = Object.entries(files);
-    let deployedUrl = '';
-
-    for (let i = 0; i < fileEntries.length; i++) {
-      const [filename, content] = fileEntries[i];
-      setStatus('🌐 배포 중... (' + (i+1) + '/' + fileEntries.length + ') ' + filename, 'var(--amber)');
-
-      const deployRes = await fetch('/api/deploy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectName,
-          filesBase64: { [filename]: utf8ToBase64(content) },
-          isFirst: i === 0,
-        }),
-      });
-
-      const deployText = await deployRes.text();
-      if (!deployText) throw new Error('응답이 없습니다.');
-      const deployData = JSON.parse(deployText);
-      if (!deployRes.ok || deployData.error) throw new Error(deployData.error || '배포 실패');
-      if (deployData.url) deployedUrl = deployData.url;
+    // 모든 파일을 한 번에 전송
+    const filesBase64 = {};
+    for (const [filename, content] of Object.entries(files)) {
+      filesBase64[filename] = utf8ToBase64(content);
     }
+
+    const deployRes = await fetch('/api/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectName, filesBase64 }),
+    });
+
+    const deployText = await deployRes.text();
+    if (!deployText) throw new Error('응답이 없습니다.');
+    const deployData = JSON.parse(deployText);
+    if (!deployRes.ok || deployData.error) throw new Error(deployData.error || '배포 실패');
 
     setStatus('✅ 배포 완료!', 'var(--green)');
 
