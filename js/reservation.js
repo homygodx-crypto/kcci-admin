@@ -39,7 +39,7 @@ async function submitReservation(data) {
     date: data.date,
     time: data.time,
     memo: data.memo || '',
-    status: 'pending',
+    status: 'waiting',
   });
 }
 
@@ -202,15 +202,18 @@ async function handleRsvSubmit() {
         'Authorization': 'Bearer ' + SUPABASE_KEY,
         'Prefer': 'return=minimal',
       },
-      body: JSON.stringify({ site_id: SITE_ID, name, phone, date, time, memo, status: 'pending' }),
+      body: JSON.stringify({ site_id: SITE_ID, name, phone, date, time, memo, status: 'waiting' }),
     });
 
-    if (!res.ok) throw new Error('서버 오류');
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error('서버 오류 (' + res.status + '): ' + errText.slice(0, 200));
+    }
 
     document.getElementById('rsvForm').style.display = 'none';
     document.getElementById('rsvSuccess').style.display = 'block';
   } catch(e) {
-    alert('예약 신청 중 오류가 발생했습니다. 전화로 문의해주세요.\n' + e.message);
+    alert('예약 신청 중 오류가 발생했습니다. 전화로 문의해주세요.\n오류: ' + e.message);
     btn.disabled = false;
     btn.textContent = '예약 신청하기';
   }
