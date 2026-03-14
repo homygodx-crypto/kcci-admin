@@ -409,7 +409,7 @@ async function deployToCloudflare() {
 
     setStatus('🌐 Cloudflare에 배포 중... (30초~1분 소요)', 'var(--amber)');
 
-    const res = await fetch(workerUrl, {
+    const res = await fetch('/api/deploy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
