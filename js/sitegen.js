@@ -493,12 +493,21 @@ async function deployToCloudflare() {
       files[filename] = filename.endsWith('.html') ? minifyHtml(html) : html;
     }
 
+    setStatus('📦 ZIP 생성 중...', 'var(--text2)');
+
+    // ZIP 생성 (JSZip)
+    const zip = new JSZip();
+    for (const [filename, content] of Object.entries(files)) {
+      zip.file(filename, content);
+    }
+    const zipBlob = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' });
+
     setStatus('🌐 Cloudflare에 배포 중... (30초~1분 소요)', 'var(--amber)');
 
     const deployRes = await fetch('/api/deploy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectName, files }),
+      body: JSON.stringify({ projectName, zipBase64: zipBlob }),
     });
 
     const deployText = await deployRes.text();

@@ -13,10 +13,10 @@ export async function onRequestPost(context) {
 
     const rawName = (body.projectName || '').trim();
     const projectName = rawName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-    const files = body.files;
+    const zipBase64 = body.zipBase64; // base64 인코딩된 ZIP
 
     if (!projectName) return new Response(JSON.stringify({ error: 'projectName required' }), { status: 400, headers: cors });
-    if (!files || Object.keys(files).length === 0) return new Response(JSON.stringify({ error: 'files required' }), { status: 400, headers: cors });
+    if (!zipBase64) return new Response(JSON.stringify({ error: 'zipBase64 required' }), { status: 400, headers: cors });
 
     // 프로젝트 없으면 생성
     const checkRes = await fetch(
@@ -39,18 +39,16 @@ export async function onRequestPost(context) {
       await new Promise(r => setTimeout(r, 2000));
     }
 
-    // 파일 FormData로 업로드
-    const encoder = new TextEncoder();
-    const formData = new FormData();
-    const manifest = {};
-
-    for (const [filename, content] of Object.entries(files)) {
-      const bytes = encoder.encode(content);
-      const hash = await sha256hex(bytes);
-      manifest['/' + filename] = hash;
-      formData.append('files', new Blob([bytes], { type: getContentType(filename) }), filename);
+    // base64 → Uint8Array
+    const binaryStr = atob(zipBase64);
+    const zipBytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      zipBytes[i] = binaryStr.charCodeAt(i);
     }
-    formData.append('manifest', JSON.stringify(manifest));
+
+    // ZIP 파일로 직접 업로드
+    const formData = new FormData();
+    formData.append('zipfile', new Blob([zipBytes], { type: 'application/zip' }), 'site.zip');
 
     const deployRes = await fetch(
       'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/projects/' + projectName + '/deployments',
@@ -76,7 +74,6 @@ export async function onRequestPost(context) {
       success: true,
       url: 'https://' + projectName + '.pages.dev',
       projectName: projectName,
-      deploymentId: deployData.result ? deployData.result.id : null,
     }), { status: 200, headers: cors });
 
   } catch(err) {
@@ -86,14 +83,4 @@ export async function onRequestPost(context) {
 
 export async function onRequestOptions() {
   return new Response('', { status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
-}
-
-function getContentType(f) {
-  const ext = (f || '').split('.').pop().toLowerCase();
-  return { html: 'text/html', css: 'text/css', js: 'application/javascript', json: 'application/json' }[ext] || 'text/plain';
-}
-
-async function sha256hex(buf) {
-  const hash = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
 }
