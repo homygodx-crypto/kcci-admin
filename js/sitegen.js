@@ -344,13 +344,14 @@ function buildAllPages(tpl, d) {
 
   // 예약 페이지 추가 (업종별)
   const rsvBuilders = {
-    pilates: () => buildPilatesReservationHtml(d),
-    cafe:    () => buildCafeReservationHtml(d),
-    beauty:  () => buildBeautyReservationHtml(d),
-    medical: () => buildMedicalReservationHtml(d),
-    academy: () => buildAcademyReservationHtml(d),
-    general: () => buildGeneralReservationHtml(d),
+    pilates: () => buildReservationPageHtml(d, pilatesCss(d), pilatesHeader(d,'reservation'), pilatesFooter(d), pilatesJs()),
+    cafe:    () => buildReservationPageHtml(d, cafeCss(d), cafeHeader(d,'reservation'), cafeFooter(d), cafeJs()),
+    beauty:  () => buildReservationPageHtml(d, beautyCss(d), beautyHeader(d,'reservation'), beautyFooter(d), beautyJs()),
+    medical: () => buildReservationPageHtml(d, medicalCss(d), medicalHeader(d,'reservation'), medicalFooter(d), medicalJs()),
+    academy: () => buildReservationPageHtml(d, academyCss(d), academyHeader(d,'reservation'), academyFooter(d), academyJs()),
+    general: () => buildReservationPageHtml(d, generalCss(d), generalHeader(d,'reservation'), generalFooter(d), generalJs()),
   };
+
   if (rsvBuilders[tpl]) pages['reservation.html'] = rsvBuilders[tpl]();
   return pages;
 }
