@@ -7,14 +7,21 @@ export async function onRequestPost(context) {
   };
 
   try {
-    const body = await context.request.json();
+    const text = await context.request.text();
+    if (!text) return new Response(JSON.stringify({ error: 'Empty body' }), { status: 400, headers: cors });
+
+    let body;
+    try { body = JSON.parse(text); }
+    catch(e) { return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: cors }); }
+
     const CF_TOKEN = 'yG1ipw4UhwvLRP8tmT_jTdxrJ9O11VVr6ABpf8B9';
     const CF_ACCOUNT = '58cc945a83beb714d97ab66a8bdfac73';
 
-    const projectName = (body.projectName || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const rawName = body.projectName || body.project_name || '';
+    const projectName = rawName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g,'-').replace(/^-|-$/g,'');
     const files = body.files;
 
-    if (!projectName) return new Response(JSON.stringify({ error: 'projectName required' }), { status: 400, headers: cors });
+    if (!projectName) return new Response(JSON.stringify({ error: 'projectName required', received: rawName }), { status: 400, headers: cors });
     if (!files || Object.keys(files).length === 0) return new Response(JSON.stringify({ error: 'files required' }), { status: 400, headers: cors });
 
     // 프로젝트 없으면 생성
