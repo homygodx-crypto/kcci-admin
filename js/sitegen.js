@@ -493,86 +493,20 @@ async function deployToCloudflare() {
       files[filename] = filename.endsWith('.html') ? minifyHtml(html) : html;
     }
 
-    setStatus('🌐 GitHub에 업로드 중...', 'var(--amber)');
+    setStatus('🌐 Cloudflare에 배포 중... (30초~1분 소요)', 'var(--amber)');
 
-    const ghToken = localStorage.getItem('kcci_gh_token');
-    const ghRepo = localStorage.getItem('kcci_gh_repo') || 'homygodx-crypto/kcci-admin';
-
-    if (!ghToken) {
-      throw new Error('GitHub 토큰이 없습니다. 설정 탭에서 GitHub Token을 입력하세요.');
-    }
-
-    // 업체별 전용 폴더에 파일 push
-    const sitePath = 'sites/' + projectName;
-    const apiBase = `https://api.github.com/repos/${ghRepo}/contents/${sitePath}`;
-    const headers = {
-      'Authorization': 'Bearer ' + ghToken,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-    };
-
-    setStatus('📤 GitHub에 업로드 중...', 'var(--amber)');
-
-    // ── GitHub Git Tree API — 모든 파일을 하나의 커밋으로 ──
-
-    // 1. 현재 브랜치의 최신 커밋 SHA 가져오기
-    const refRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/ref/heads/main`, { headers });
-    if (!refRes.ok) throw new Error('GitHub 브랜치 정보 조회 실패: ' + refRes.status);
-    const refData = await refRes.json();
-    const latestCommitSha = refData.object.sha;
-
-    // 2. 최신 커밋의 트리 SHA 가져오기
-    const commitRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/commits/${latestCommitSha}`, { headers });
-    const commitData = await commitRes.json();
-    const baseTreeSha = commitData.tree.sha;
-
-    // 3. 새 트리 생성 (모든 파일 한번에)
-    const treeItems = Object.entries(files).map(([filename, content]) => ({
-      path: sitePath + '/' + filename,
-      mode: '100644',
-      type: 'blob',
-      content: content,
-    }));
-
-    const treeRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/trees`, {
+    const deployRes = await fetch('/api/deploy', {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ base_tree: baseTreeSha, tree: treeItems }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectName, files }),
     });
-    if (!treeRes.ok) {
-      const e = await treeRes.json();
-      throw new Error('트리 생성 실패: ' + (e.message || treeRes.status));
-    }
-    const treeData = await treeRes.json();
 
-    // 4. 새 커밋 생성
-    const newCommitRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/commits`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        message: `Deploy ${projectName} (${Object.keys(files).length}개 파일)`,
-        tree: treeData.sha,
-        parents: [latestCommitSha],
-      }),
-    });
-    if (!newCommitRes.ok) {
-      const e = await newCommitRes.json();
-      throw new Error('커밋 생성 실패: ' + (e.message || newCommitRes.status));
-    }
-    const newCommitData = await newCommitRes.json();
+    const deployText = await deployRes.text();
+    if (!deployText) throw new Error('응답이 없습니다.');
+    const deployData = JSON.parse(deployText);
+    if (!deployRes.ok || deployData.error) throw new Error(deployData.error || '배포 실패');
 
-    // 5. 브랜치 업데이트
-    const updateRefRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/refs/heads/main`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ sha: newCommitData.sha }),
-    });
-    if (!updateRefRes.ok) {
-      const e = await updateRefRes.json();
-      throw new Error('브랜치 업데이트 실패: ' + (e.message || updateRefRes.status));
-    }
-
-    setStatus('✅ GitHub 업로드 완료! Cloudflare Pages 자동 배포 중... (1~2분 소요)', 'var(--amber)');
+    setStatus('✅ 배포 완료!', 'var(--green)');
 
     const cfUrl = 'https://' + projectName + '.pages.dev';
 
@@ -587,7 +521,7 @@ async function deployToCloudflare() {
       }
     }
 
-    setStatus(`✅ GitHub 업로드 완료! Cloudflare Pages 자동 배포 중...<br><a href="${cfUrl}" target="_blank" style="color:var(--gold);font-weight:600">${cfUrl}</a>`, 'var(--green)');
+    setStatus(`✅ 배포 완료!<br><a href="${cfUrl}" target="_blank" style="color:var(--gold);font-weight:600">${cfUrl}</a>`, 'var(--green)');
     showToast('🚀 GitHub 업로드 완료!', 'success');
 
     // 결과 표시

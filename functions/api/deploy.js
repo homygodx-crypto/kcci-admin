@@ -7,22 +7,12 @@ export async function onRequestPost(context) {
   };
 
   try {
-    const text = await context.request.text();
-    if (!text) {
-      return new Response(JSON.stringify({ error: 'Empty body' }), { status: 400, headers: cors });
-    }
-
-    let body;
-    try {
-      body = JSON.parse(text);
-    } catch(e) {
-      return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: cors });
-    }
-
+    const body = await context.request.json();
     const CF_TOKEN = 'yG1ipw4UhwvLRP8tmT_jTdxrJ9O11VVr6ABpf8B9';
     const CF_ACCOUNT = '58cc945a83beb714d97ab66a8bdfac73';
-    const rawName = body.projectName || '';
-    const projectName = rawName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+    const rawName = (body.projectName || '').trim();
+    const projectName = rawName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
     const files = body.files;
 
     if (!projectName) {
@@ -32,14 +22,15 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: 'files required' }), { status: 400, headers: cors });
     }
 
+    // 프로젝트 없으면 생성
     const checkRes = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects/${projectName}`,
+      'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/projects/' + projectName,
       { headers: { 'Authorization': 'Bearer ' + CF_TOKEN } }
     );
 
     if (!checkRes.ok) {
       const createRes = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects`,
+        'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/projects',
         {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + CF_TOKEN, 'Content-Type': 'application/json' },
@@ -53,25 +44,34 @@ export async function onRequestPost(context) {
           { status: 500, headers: cors }
         );
       }
+      await new Promise(r => setTimeout(r, 1500));
     }
 
+    // FormData로 파일 업로드
     const formData = new FormData();
     const manifest = {};
+    const encoder = new TextEncoder();
 
     for (const [filename, content] of Object.entries(files)) {
-      const encoded = new TextEncoder().encode(content);
-      const blob = new Blob([encoded], { type: getContentType(filename) });
-      formData.append('files', blob, filename);
-      manifest['/' + filename] = await hashBuffer(encoded);
+      const bytes = encoder.encode(content);
+      const hash = await sha256hex(bytes);
+      manifest['/' + filename] = hash;
+      formData.append('files', new Blob([bytes], { type: getContentType(filename) + ';charset=utf-8' }), filename);
     }
     formData.append('manifest', JSON.stringify(manifest));
 
     const deployRes = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects/${projectName}/deployments`,
-      { method: 'POST', headers: { 'Authorization': 'Bearer ' + CF_TOKEN }, body: formData }
+      'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/pages/projects/' + projectName + '/deployments',
+      {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + CF_TOKEN },
+        body: formData,
+      }
     );
 
-    const deployData = await deployRes.json();
+    const deployText = await deployRes.text();
+    let deployData;
+    try { deployData = JSON.parse(deployText); } catch(e) { deployData = {}; }
 
     if (!deployRes.ok) {
       return new Response(
@@ -107,14 +107,14 @@ export async function onRequestOptions() {
 }
 
 function getContentType(f) {
-  const e = f.split('.').pop().toLowerCase();
+  const ext = f.split('.').pop().toLowerCase();
   const map = { html: 'text/html', css: 'text/css', js: 'application/javascript', json: 'application/json' };
-  return map[e] || 'text/plain';
+  return map[ext] || 'text/plain';
 }
 
-async function hashBuffer(buf) {
-  const b = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(b)).map(function(x) {
-    return x.toString(16).padStart(2, '0');
+async function sha256hex(buf) {
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(function(b) {
+    return b.toString(16).padStart(2, '0');
   }).join('').substring(0, 32);
 }
