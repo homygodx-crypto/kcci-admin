@@ -17,7 +17,7 @@ header.scrolled{background:rgba(249,246,240,0.99);}
 .logo-text{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--navy);letter-spacing:.06em;line-height:1.2;}
 .logo-sub{display:block;font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;font-weight:300;margin-top:2px;}
 nav{display:flex;gap:40px;}
-nav a{font-size:var(--fs-nav);color:rgba(26,20,16,0.5);text-decoration:none;letter-spacing:.18em;text-transform:uppercase;transition:color .2s;position:relative;}
+nav a{font-size:14px;color:rgba(26,20,16,0.5);text-decoration:none;letter-spacing:.18em;text-transform:uppercase;transition:color .2s;position:relative;}
 nav a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;background:var(--gold);transition:width .3s;}
 nav a:hover,nav a.active{color:var(--navy);}
 nav a:hover::after,nav a.active::after{width:100%;}

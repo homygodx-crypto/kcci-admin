@@ -15,7 +15,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:100;height:66px;display:flex;
 .logo-text{font-family:'Josefin Sans',sans-serif;font-size:18px;color:var(--dark);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;}
 .logo-sub{display:block;font-size:9px;color:var(--rose);letter-spacing:.3em;text-transform:uppercase;margin-top:2px;}
 nav{display:flex;gap:36px;}
-nav a{font-family:'Josefin Sans',sans-serif;font-size:var(--fs-nav);color:rgba(26,15,20,0.5);text-decoration:none;letter-spacing:.16em;text-transform:uppercase;transition:color .2s;}
+nav a{font-family:'Josefin Sans',sans-serif;font-size:14px;color:rgba(26,15,20,0.5);text-decoration:none;letter-spacing:.16em;text-transform:uppercase;transition:color .2s;}
 nav a:hover,nav a.active{color:var(--rose);background:rgba(201,128,138,0.06);}
 .header-cta{font-family:'Josefin Sans',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;background:none;border:1px solid var(--bd);color:var(--rose);padding:8px 18px;text-decoration:none;transition:all .2s;cursor:pointer;background:rgba(201,128,138,0.06);}
 .header-cta:hover{background:var(--rose);color:#000;}

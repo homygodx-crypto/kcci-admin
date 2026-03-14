@@ -16,7 +16,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:100;height:68px;display:flex;
 .logo-text{font-family:'Playfair Display',serif;font-size:22px;color:var(--brown);letter-spacing:.02em;}
 .logo-sub{display:block;font-size:10px;color:var(--terra);letter-spacing:.2em;text-transform:uppercase;margin-top:1px;}
 nav{display:flex;gap:36px;}
-nav a{font-size:var(--fs-nav);color:rgba(45,34,21,0.55);text-decoration:none;letter-spacing:.05em;transition:color .2s;font-weight:500;}
+nav a{font-size:14px;color:rgba(45,34,21,0.55);text-decoration:none;letter-spacing:.05em;transition:color .2s;font-weight:500;}
 nav a:hover,nav a.active{color:var(--brown);}
 .header-cta{background:var(--terra);color:#fff;padding:9px 20px;font-size:13px;font-weight:600;text-decoration:none;font-family:inherit;border:none;cursor:pointer;transition:background .2s;}
 .header-cta:hover{background:#a8432c;}

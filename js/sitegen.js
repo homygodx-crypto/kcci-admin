@@ -343,13 +343,17 @@ async function generateSiteZip() {
 
 // ── admin.html 생성 ──
 function buildAdminHtml(d) {
-  const pwHashMap = {
-    'thdP1234': '55d839730dcd04cccf7d2d8f2c7b24ae9e35e0fccd8519e2a1702789d2c2cbb2',
+  const tpl = d.industry || 'general';
+  const adminBuilders = {
+    pilates: buildPilatesAdminHtml,
+    cafe:    buildCafeAdminHtml,
+    beauty:  buildBeautyAdminHtml,
+    medical: buildMedicalAdminHtml,
+    academy: buildAcademyAdminHtml,
+    general: buildGeneralAdminHtml,
   };
-  const pwHash = pwHashMap[d.adminPw] || pwHashMap['thdP1234'];
-  // admin.html은 soyae_site/admin.html 기반 — 핵심 변수만 주입
-  return `<!-- admin.html for ${d.name} -->\n<!-- adminId: ${d.adminId} -->\n<!-- supabaseUrl: ${d.cloudName} -->\n<!-- generated: ${new Date().toISOString()} -->\n`;
-  // 실제 구현은 soyae_site/admin.html을 기반으로 별도 파일로 관리
+  const builder = adminBuilders[tpl] || buildGeneralAdminHtml;
+  return builder(d);
 }
 
 // ── 업체 목록 셀렉트 채우기 ──

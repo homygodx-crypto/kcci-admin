@@ -16,7 +16,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:100;height:66px;display:flex;
 .logo-text{font-family:'DM Sans',sans-serif;font-size:18px;color:var(--navy);font-weight:700;display:block;}
 .logo-sub{font-size:10px;color:var(--orange);letter-spacing:.18em;text-transform:uppercase;font-weight:500;margin-top:1px;display:block;}
 nav{display:flex;gap:32px;}
-nav a{font-family:'DM Sans',sans-serif;font-size:var(--fs-nav);color:rgba(13,27,54,0.55);text-decoration:none;font-weight:500;transition:color .2s;}
+nav a{font-family:'DM Sans',sans-serif;font-size:14px;color:rgba(13,27,54,0.55);text-decoration:none;font-weight:500;transition:color .2s;}
 nav a:hover,nav a.active{color:var(--navy);}
 .header-cta{font-family:'DM Sans',sans-serif;background:var(--orange);color:#fff;padding:9px 20px;font-size:13px;font-weight:700;text-decoration:none;transition:background .2s;}
 .header-cta:hover{background:var(--orange2);}

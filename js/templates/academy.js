@@ -15,7 +15,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:100;height:68px;display:flex;
 .logo-text{font-family:'Montserrat',sans-serif;font-size:18px;color:var(--navy);font-weight:800;letter-spacing:.02em;text-decoration:none;display:block;}
 .logo-sub{font-size:10px;color:var(--sky);letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-top:1px;display:block;}
 nav{display:flex;gap:32px;}
-nav a{font-family:'Montserrat',sans-serif;font-size:var(--fs-nav);color:rgba(15,27,45,0.55);text-decoration:none;letter-spacing:.08em;text-transform:uppercase;font-weight:600;transition:color .2s;}
+nav a{font-family:'Montserrat',sans-serif;font-size:14px;color:rgba(15,27,45,0.55);text-decoration:none;letter-spacing:.08em;text-transform:uppercase;font-weight:600;transition:color .2s;}
 nav a:hover,nav a.active{color:var(--sky);}
 .header-cta{font-family:'Montserrat',sans-serif;background:var(--yellow);color:var(--navy);padding:9px 20px;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;transition:all .2s;}
 .header-cta:hover{background:var(--yellow2);}

@@ -82,8 +82,8 @@ ${cssStr ? '<style>' + cssStr + `
 .rsv-group{display:flex;flex-direction:column;gap:6px;}
 .rsv-group label{font-size:12px;letter-spacing:.1em;opacity:.6;text-transform:uppercase;font-weight:500;}
 .rsv-group input,.rsv-group select,.rsv-group textarea{
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
-  color:inherit;padding:13px 16px;font-size:15px;font-family:inherit;
+  background:#fff;border:1px solid rgba(0,0,0,0.15);
+  color:#222;padding:13px 16px;font-size:15px;font-family:inherit;
   border-radius:4px;outline:none;transition:border-color .2s;width:100%;
 }
 .rsv-group input:focus,.rsv-group select:focus,.rsv-group textarea:focus{border-color:var(--gold,#C9A040);}
@@ -105,7 +105,7 @@ ${cssStr ? '<style>' + cssStr + `
 <body>
 ${headerStr || ''}
 
-<div style="padding-top:70px">
+<div style="padding-top:80px;min-height:100vh;background:inherit">
   <div class="rsv-wrap">
     <div id="rsvForm">
       <div class="rsv-title">예약하기</div>

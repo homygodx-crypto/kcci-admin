@@ -16,7 +16,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:100;height:70px;display:flex;
 .logo-text{font-family:'Noto Serif KR',serif;font-size:19px;color:var(--green);display:block;}
 .logo-sub{font-size:10px;color:rgba(45,90,61,0.6);letter-spacing:.16em;text-transform:uppercase;margin-top:2px;display:block;}
 nav{display:flex;gap:36px;}
-nav a{font-size:var(--fs-nav);color:rgba(42,42,34,0.55);text-decoration:none;letter-spacing:.04em;transition:color .2s;font-weight:500;}
+nav a{font-size:14px;color:rgba(42,42,34,0.55);text-decoration:none;letter-spacing:.04em;transition:color .2s;font-weight:500;}
 nav a:hover,nav a.active{color:var(--green);}
 .header-cta{background:var(--green);color:#fff;padding:9px 20px;font-size:13px;font-weight:500;text-decoration:none;transition:background .2s;}
 .header-cta:hover{background:var(--green2);}
