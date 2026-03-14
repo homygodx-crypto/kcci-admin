@@ -63,6 +63,35 @@
         </div>
       </div>
 
+      <!-- GitHub 배포 설정 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><h3>🐙 GitHub 자동 배포 설정</h3></div>
+        <div class="card-body">
+          <div class="alert-bar" style="margin-bottom:16px">
+            <span class="ic">ℹ️</span>
+            <div>GitHub 저장소에 자동으로 파일을 push하면 Cloudflare Pages가 자동 배포합니다.<br>
+            <a href="https://github.com/settings/tokens/new?scopes=repo&description=kcci-deploy" target="_blank" style="color:var(--gold)">여기서 GitHub Token 발급</a> → <b>repo</b> 체크 → Generate token</div>
+          </div>
+          <div class="fg">
+            <label>GitHub Personal Access Token</label>
+            <div style="display:flex;gap:8px">
+              <input type="password" id="settingGhToken" placeholder="ghp_..." style="font-family:monospace;font-size:12px;flex:1">
+              <button class="btn btn-ghost" onclick="toggleGhTokenVis()">보기</button>
+            </div>
+            <div id="ghTokenStatus" style="margin-top:6px;font-size:12px;color:var(--text3)">저장된 토큰 없음</div>
+          </div>
+          <div class="fg" style="margin-top:12px">
+            <label>GitHub 저장소 (owner/repo)</label>
+            <input type="text" id="settingGhRepo" placeholder="homygodx-crypto/kcci-admin" style="font-family:monospace;font-size:12px">
+            <div class="hint">예: homygodx-crypto/kcci-admin</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveGhSettings()">💾 저장</button>
+            <button class="btn btn-ghost" onclick="testGhToken()">🧪 연결 테스트</button>
+          </div>
+        </div>
+      </div>
+
       <!-- AI 생성 설정 -->
       <div class="card" style="margin-bottom:16px">
         <div class="card-head"><h3>🎛 AI 생성 옵션</h3></div>
@@ -158,6 +187,52 @@ function saveAiOptions() {
   localStorage.setItem('kcci_ai_lang', document.getElementById('settingLang').value);
   localStorage.setItem('kcci_ai_extra', document.getElementById('settingExtra').value);
   showToast('✅ AI 설정 저장 완료', 'success');
+}
+
+function toggleGhTokenVis() {
+  const el = document.getElementById('settingGhToken');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function saveGhSettings() {
+  const token = document.getElementById('settingGhToken').value.trim();
+  const repo = document.getElementById('settingGhRepo').value.trim();
+  if (token) localStorage.setItem('kcci_gh_token', token);
+  if (repo) localStorage.setItem('kcci_gh_repo', repo);
+  const statusEl = document.getElementById('ghTokenStatus');
+  if (statusEl && token) statusEl.innerHTML = `<span style="color:var(--green)">✅ 저장됨: ${token.substring(0,8)}...</span>`;
+  showToast('✅ GitHub 설정 저장 완료', 'success');
+}
+
+async function testGhToken() {
+  const token = localStorage.getItem('kcci_gh_token') || document.getElementById('settingGhToken').value.trim();
+  const repo = localStorage.getItem('kcci_gh_repo') || document.getElementById('settingGhRepo').value.trim();
+  if (!token || !repo) { showToast('⚠️ 토큰과 저장소를 입력하세요.', 'error'); return; }
+  showToast('🧪 연결 테스트 중...');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}`, {
+      headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      showToast('✅ 연결 성공: ' + data.full_name, 'success');
+    } else {
+      showToast('❌ 연결 실패: ' + res.status, 'error');
+    }
+  } catch(e) {
+    showToast('❌ 오류: ' + e.message, 'error');
+  }
+}
+
+// 저장된 GitHub 설정 불러오기
+const _ghToken = localStorage.getItem('kcci_gh_token');
+const _ghRepo = localStorage.getItem('kcci_gh_repo');
+if (_ghToken && document.getElementById('settingGhToken')) {
+  document.getElementById('settingGhToken').value = _ghToken;
+  document.getElementById('ghTokenStatus').innerHTML = `<span style="color:var(--green)">✅ 저장됨: ${_ghToken.substring(0,8)}...</span>`;
+}
+if (_ghRepo && document.getElementById('settingGhRepo')) {
+  document.getElementById('settingGhRepo').value = _ghRepo;
 }
 
 loadSettingsPage();

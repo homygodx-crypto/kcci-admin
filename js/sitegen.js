@@ -382,7 +382,11 @@ async function deployToCloudflare() {
   const pages = buildAllPages(tpl, d);
 
   // 프로젝트명 생성 — URL 입력값 우선, 없으면 타임스탬프 기반으로 생성
-  const urlVal = sgV('sgUrl').replace(/\.pages\.dev.*/,'').replace(/[^a-z0-9-]/g,'').substring(0,20);
+  const urlVal = sgV('sgUrl')
+    .replace(/^https?:\/\//i, '')
+    .replace(/\.pages\.dev.*/,'')
+    .replace(/[^a-z0-9-]/g,'')
+    .substring(0,28);
   const projectName = urlVal || ('kcci-' + Date.now().toString(36).slice(-6));
 
   const btn = document.getElementById('deployBtn');
@@ -397,31 +401,77 @@ async function deployToCloudflare() {
   try {
     setStatus('📦 파일 준비 중...', 'var(--text2)');
 
+    // HTML 압축 (공백/주석 제거)
+    function minifyHtml(html) {
+      return html
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/\n\s*\n/g, '\n')
+        .replace(/  +/g, ' ')
+        .trim();
+    }
+
     // 파일 객체 생성
     const files = {};
     for (const [filename, html] of Object.entries(pages)) {
-      files[filename] = html;
+      files[filename] = filename.endsWith('.html') ? minifyHtml(html) : html;
     }
 
-    setStatus('🌐 Cloudflare에 배포 중... (30초~1분 소요)', 'var(--amber)');
+    setStatus('🌐 GitHub에 업로드 중...', 'var(--amber)');
 
-    const res = await fetch('/api/deploy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'deploy',
-        projectName,
-        files,
-      })
-    });
+    const ghToken = localStorage.getItem('kcci_gh_token');
+    const ghRepo = localStorage.getItem('kcci_gh_repo') || 'homygodx-crypto/kcci-admin';
 
-    const resText = await res.text();
-    if (!resText) throw new Error('응답이 없습니다.');
-    const data = JSON.parse(resText);
+    if (!ghToken) {
+      throw new Error('GitHub 토큰이 없습니다. 설정 탭에서 GitHub Token을 입력하세요.');
+    }
 
-    if (!res.ok || data.error) throw new Error(data.error || '배포 실패');
+    // 업체별 전용 폴더에 파일 push
+    const sitePath = 'sites/' + projectName;
+    const apiBase = `https://api.github.com/repos/${ghRepo}/contents/${sitePath}`;
+    const headers = {
+      'Authorization': 'Bearer ' + ghToken,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    };
 
-    const siteUrl = data.url;
+    let uploadCount = 0;
+    for (const [filename, content] of Object.entries(files)) {
+      // base64 인코딩
+      const b64 = btoa(unescape(encodeURIComponent(content)));
+      const filePath = `${apiBase}/${filename}`;
+
+      // 기존 파일 SHA 확인 (업데이트용)
+      let sha = undefined;
+      try {
+        const getRes = await fetch(filePath, { headers });
+        if (getRes.ok) {
+          const existing = await getRes.json();
+          sha = existing.sha;
+        }
+      } catch(e) {}
+
+      // 파일 업로드
+      const body = {
+        message: `Deploy ${projectName} - ${filename}`,
+        content: b64,
+      };
+      if (sha) body.sha = sha;
+
+      const putRes = await fetch(filePath, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      if (!putRes.ok) {
+        const err = await putRes.json();
+        throw new Error(`${filename} 업로드 실패: ${err.message || putRes.status}`);
+      }
+      uploadCount++;
+      setStatus(`📤 업로드 중... (${uploadCount}/${Object.keys(files).length})`, 'var(--amber)');
+    }
+
+    const cfUrl = `https://${projectName}.pages.dev`;
 
     // 업체 목록에 URL 자동 저장
     const clients = loadClients();
@@ -429,13 +479,13 @@ async function deployToCloudflare() {
     if (clientId) {
       const idx = clients.findIndex(c => c.id === clientId);
       if (idx !== -1) {
-        clients[idx].url = siteUrl;
+        clients[idx].url = cfUrl;
         saveClients(clients);
       }
     }
 
-    setStatus(`✅ 배포 완료!<br><a href="${siteUrl}" target="_blank" style="color:var(--gold);font-weight:600">${siteUrl}</a><br><small style="color:var(--text3)">admin.html: ${siteUrl}/admin.html</small>`, 'var(--green)');
-    showToast('🚀 배포 완료! ' + siteUrl, 'success');
+    setStatus(`✅ GitHub 업로드 완료! Cloudflare Pages 자동 배포 중...<br><a href="${cfUrl}" target="_blank" style="color:var(--gold);font-weight:600">${cfUrl}</a>`, 'var(--green)');
+    showToast('🚀 GitHub 업로드 완료!', 'success');
 
     // 결과 표시
     document.getElementById('sgResultWrap').style.display = 'block';
