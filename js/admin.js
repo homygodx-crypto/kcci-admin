@@ -243,8 +243,11 @@ body{font-family:'Apple SD Gothic Neo','맑은 고딕',sans-serif;background:#f0
             </div>
             <div class="fg"><label>주차 안내</label><input type="text" id="iParking" value="${d.parking||''}"></div>
             <div class="fg"><label>슬로건</label><input type="text" id="iSlogan" value="${d.slogan||''}"></div>
-            <button class="btn-gold" onclick="saveInfo()">💾 저장</button>
-            <p style="margin-top:12px;font-size:13px;color:#aaa">※ 저장된 정보는 이 기기에 보관됩니다. 홈페이지에 반영하려면 담당자에게 연락해주세요.</p>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px">
+              <button class="btn btn-primary" onclick="saveInfo()">💾 저장</button>
+              <button class="btn btn-primary" style="background:#2D5A3D;border-color:#2D5A3D" onclick="redeployPage()" id="redeployBtn">🚀 저장 + 홈페이지 바로 적용</button>
+            </div>
+            <div id="redeployStatus" style="margin-top:12px;font-size:13px;color:#666"></div>
           </div>
         </div>
       </div>
@@ -254,6 +257,24 @@ body{font-family:'Apple SD Gothic Neo','맑은 고딕',sans-serif;background:#f0
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 사이트 데이터 (재배포용) -->
+<script id="siteData" type="application/json">${JSON.stringify({
+  name: siteName,
+  phone: d.phone||'',
+  address: d.address||'',
+  openHours: d.openHours||'',
+  parking: d.parking||'',
+  slogan: d.slogan||'',
+  industry: d.industry||'general',
+  nameEn: d.nameEn||'',
+  placeId: d.placeId||'',
+  blog: d.blog||'',
+  insta: d.insta||'',
+  adminId: adminId,
+  adminPw: adminPw,
+  masterDomain: 'https://kcci-admin.pages.dev'
+})}</script>
 
 <script>
 var ADMIN_ID = '${adminId}';
@@ -487,18 +508,103 @@ async function addGallery(input) {
 }
 
 // 기본 정보
-function saveInfo() {
-  var info = {
-    name: document.getElementById('iName').value,
-    phone: document.getElementById('iPhone').value,
-    address: document.getElementById('iAddress').value,
-    hours: document.getElementById('iHours').value,
-    closed: document.getElementById('iClosed').value,
-    parking: document.getElementById('iParking').value,
-    slogan: document.getElementById('iSlogan').value,
+function getInfoValues() {
+  return {
+    name: document.getElementById('iName').value.trim(),
+    phone: document.getElementById('iPhone').value.trim(),
+    address: document.getElementById('iAddress').value.trim(),
+    hours: document.getElementById('iHours').value.trim(),
+    closed: document.getElementById('iClosed').value.trim(),
+    parking: document.getElementById('iParking').value.trim(),
+    slogan: document.getElementById('iSlogan').value.trim(),
   };
+}
+
+function saveInfo() {
+  var info = getInfoValues();
   localStorage.setItem('info_' + SITE_ID, JSON.stringify(info));
   showToast('✅ 저장되었습니다');
+}
+
+async function redeployPage() {
+  var btn = document.getElementById('redeployBtn');
+  var status = document.getElementById('redeployStatus');
+  if (!btn || !status) return;
+
+  // 정보 저장
+  saveInfo();
+  var info = getInfoValues();
+
+  btn.disabled = true;
+  btn.textContent = '🔄 배포 중...';
+  status.textContent = '홈페이지를 업데이트하고 있습니다...';
+  status.style.color = '#888';
+
+  try {
+    // 현재 Worker 스크립트에서 파일 목록 가져오기
+    // Worker 이름은 SITE_ID에서 추출
+    var workerName = SITE_ID.replace(/_/g, '-').toLowerCase();
+
+    // 현재 페이지의 도메인에서 Worker 이름 추출
+    var hostname = window.location.hostname;
+    if (hostname.includes('.smallbiz.workers.dev')) {
+      workerName = hostname.replace('.smallbiz.workers.dev', '');
+    } else if (hostname.includes('.workers.dev')) {
+      workerName = hostname.split('.')[0];
+    }
+
+    // admin.html의 메타 태그에서 원래 배포 데이터 가져오기
+    // 현재 페이지 HTML에서 SITE_DATA를 추출
+    var siteDataEl = document.getElementById('siteData');
+    if (!siteDataEl) {
+      status.textContent = '⚠️ 재배포를 위해 master-admin에서 다시 배포해주세요.';
+      status.style.color = '#e74c3c';
+      btn.disabled = false;
+      btn.textContent = '🚀 저장 + 홈페이지 바로 적용';
+      return;
+    }
+
+    var siteData = JSON.parse(siteDataEl.textContent);
+
+    // 수정된 정보 반영
+    siteData.name = info.name || siteData.name;
+    siteData.phone = info.phone || siteData.phone;
+    siteData.address = info.address || siteData.address;
+    siteData.openHours = info.hours || siteData.openHours;
+    siteData.parking = info.parking || siteData.parking;
+    siteData.slogan = info.slogan || siteData.slogan;
+
+    // master-admin의 /api/redeploy로 요청
+    var masterDomain = siteData.masterDomain || '';
+    if (!masterDomain) {
+      status.textContent = '⚠️ 재배포를 위해 master-admin에서 다시 배포해주세요.';
+      status.style.color = '#e74c3c';
+      btn.disabled = false;
+      btn.textContent = '🚀 저장 + 홈페이지 바로 적용';
+      return;
+    }
+
+    var res = await fetch(masterDomain + '/api/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectName: workerName, siteData: siteData }),
+    });
+
+    var data = await res.json();
+    if (data.success) {
+      status.textContent = '✅ 홈페이지가 성공적으로 업데이트되었습니다!';
+      status.style.color = '#2D5A3D';
+      showToast('✅ 홈페이지 업데이트 완료!');
+    } else {
+      throw new Error(data.error || '배포 실패');
+    }
+  } catch (e) {
+    status.textContent = '⚠️ ' + e.message + ' — master-admin에서 재배포해주세요.';
+    status.style.color = '#e74c3c';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚀 저장 + 홈페이지 바로 적용';
+  }
 }
 
 
