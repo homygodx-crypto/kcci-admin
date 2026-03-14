@@ -33,10 +33,11 @@ export async function onRequestPost(context) {
     // 각 파일을 별도 ES module export로 분리
     const fileModules = entries.map(([f, content]) => {
       const varName = f.replace(/[^a-zA-Z0-9]/g, '_');
-      // </script> 와 <script 를 유니코드 이스케이프로 처리
+      // <script> 태그가 Worker JS 문자열을 깨뜨리지 않도록
+      // < 를 \u003c 로 치환 (JSON.stringify 이후 처리)
       const safe = JSON.stringify(content)
-        .replace(/<\/script>/gi, '<\\/script>')
-        .replace(/<script/gi, '<\\u0073cript');
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e');
       return `const _${varName} = ${safe};`;
     }).join('\n');
 
