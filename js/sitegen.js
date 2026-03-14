@@ -353,6 +353,27 @@ function buildAllPages(tpl, d) {
   };
 
   if (rsvBuilders[tpl]) pages['reservation.html'] = rsvBuilders[tpl]();
+
+  // 모든 페이지에 방문자 기록 스크립트 삽입 (admin.html 제외)
+  const visitScript = `<script>
+(function(){
+  var U='https://vugtupipbpfundipgcqc.supabase.co';
+  var K='sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S';
+  var sid=location.hostname.split('.')[0];
+  var ua=navigator.userAgent;
+  var dv=/Mobile|Android|iPhone/i.test(ua)?'mobile':/iPad|Tablet/i.test(ua)?'tablet':'desktop';
+  var br=/Edg/i.test(ua)?'Edge':/Chrome/i.test(ua)?'Chrome':/Firefox/i.test(ua)?'Firefox':/Safari/i.test(ua)?'Safari':'etc';
+  var pg=location.pathname.split('/').pop()||'index.html';
+  fetch(U+'/rest/v1/page_views',{method:'POST',headers:{'apikey':K,'Authorization':'Bearer '+K,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({site_id:sid,page:pg,device:dv,browser:br,visit_date:new Date().toISOString().slice(0,10),visited_at:new Date().toISOString()})}).catch(function(){});
+})();
+<` + `/script>`;
+
+  for (const fname of Object.keys(pages)) {
+    if (fname !== 'admin.html' && pages[fname]) {
+      pages[fname] = pages[fname].replace('</body>', visitScript + '\n</body>');
+    }
+  }
+
   return pages;
 }
 

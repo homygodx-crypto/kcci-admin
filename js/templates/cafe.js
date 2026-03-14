@@ -273,6 +273,21 @@ ${d.placeId ? `
 ${cafeFooter(d)}
 <script>${cafeJs(d)}<\/script>
 
+<script>
+(function(){
+  var SB_URL="https://vugtupipbpfundipgcqc.supabase.co";
+  var SB_KEY="sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S";
+  var ua=navigator.userAgent;
+  var dv=/Mobile|Android|iPhone/i.test(ua)?"mobile":/iPad|Tablet/i.test(ua)?"tablet":"desktop";
+  var br=/Edg/i.test(ua)?"Edge":/Chrome/i.test(ua)?"Chrome":/Firefox/i.test(ua)?"Firefox":/Safari/i.test(ua)?"Safari":"etc";
+  var page=location.pathname.split("/").pop()||"index.html";
+  fetch(SB_URL+"/rest/v1/page_views",{
+    method:"POST",
+    headers:{"apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify({site_id:"${ (d.url||d.name||"site").replace(/[^a-z0-9]/gi,"_").toLowerCase() }",page:page,device:dv,browser:br,visit_date:new Date().toISOString().slice(0,10),visited_at:new Date().toISOString()})
+  }).catch(function(){});
+})();
+<\/script>
 </body>
 </html>`;
 }
