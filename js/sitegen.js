@@ -511,42 +511,68 @@ async function deployToCloudflare() {
       'Content-Type': 'application/json',
     };
 
-    let uploadCount = 0;
-    for (const [filename, content] of Object.entries(files)) {
-      // base64 인코딩
-      const b64 = btoa(unescape(encodeURIComponent(content)));
-      const filePath = `${apiBase}/${filename}`;
+    setStatus('📤 GitHub에 업로드 중...', 'var(--amber)');
 
-      // 기존 파일 SHA 확인 (업데이트용)
-      let sha = undefined;
-      try {
-        const getRes = await fetch(filePath, { headers });
-        if (getRes.ok) {
-          const existing = await getRes.json();
-          sha = existing.sha;
-        }
-      } catch(e) {}
+    // ── GitHub Git Tree API — 모든 파일을 하나의 커밋으로 ──
 
-      // 파일 업로드
-      const body = {
-        message: `Deploy ${projectName} - ${filename}`,
-        content: b64,
-      };
-      if (sha) body.sha = sha;
+    // 1. 현재 브랜치의 최신 커밋 SHA 가져오기
+    const refRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/ref/heads/main`, { headers });
+    if (!refRes.ok) throw new Error('GitHub 브랜치 정보 조회 실패: ' + refRes.status);
+    const refData = await refRes.json();
+    const latestCommitSha = refData.object.sha;
 
-      const putRes = await fetch(filePath, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(body),
-      });
+    // 2. 최신 커밋의 트리 SHA 가져오기
+    const commitRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/commits/${latestCommitSha}`, { headers });
+    const commitData = await commitRes.json();
+    const baseTreeSha = commitData.tree.sha;
 
-      if (!putRes.ok) {
-        const err = await putRes.json();
-        throw new Error(`${filename} 업로드 실패: ${err.message || putRes.status}`);
-      }
-      uploadCount++;
-      setStatus(`📤 업로드 중... (${uploadCount}/${Object.keys(files).length})`, 'var(--amber)');
+    // 3. 새 트리 생성 (모든 파일 한번에)
+    const treeItems = Object.entries(files).map(([filename, content]) => ({
+      path: sitePath + '/' + filename,
+      mode: '100644',
+      type: 'blob',
+      content: content,
+    }));
+
+    const treeRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/trees`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ base_tree: baseTreeSha, tree: treeItems }),
+    });
+    if (!treeRes.ok) {
+      const e = await treeRes.json();
+      throw new Error('트리 생성 실패: ' + (e.message || treeRes.status));
     }
+    const treeData = await treeRes.json();
+
+    // 4. 새 커밋 생성
+    const newCommitRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/commits`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message: `Deploy ${projectName} (${Object.keys(files).length}개 파일)`,
+        tree: treeData.sha,
+        parents: [latestCommitSha],
+      }),
+    });
+    if (!newCommitRes.ok) {
+      const e = await newCommitRes.json();
+      throw new Error('커밋 생성 실패: ' + (e.message || newCommitRes.status));
+    }
+    const newCommitData = await newCommitRes.json();
+
+    // 5. 브랜치 업데이트
+    const updateRefRes = await fetch(`https://api.github.com/repos/${ghRepo}/git/refs/heads/main`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ sha: newCommitData.sha }),
+    });
+    if (!updateRefRes.ok) {
+      const e = await updateRefRes.json();
+      throw new Error('브랜치 업데이트 실패: ' + (e.message || updateRefRes.status));
+    }
+
+    setStatus('✅ GitHub 업로드 완료! Cloudflare Pages 자동 배포 중... (1~2분 소요)', 'var(--amber)');
 
     const cfUrl = 'https://' + projectName + '.pages.dev';
 
