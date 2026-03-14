@@ -493,21 +493,25 @@ async function deployToCloudflare() {
       files[filename] = filename.endsWith('.html') ? minifyHtml(html) : html;
     }
 
-    setStatus('📦 ZIP 생성 중...', 'var(--text2)');
-
-    // ZIP 생성 (JSZip)
-    const zip = new JSZip();
-    for (const [filename, content] of Object.entries(files)) {
-      zip.file(filename, content);
-    }
-    const zipBlob = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' });
-
     setStatus('🌐 Cloudflare에 배포 중... (30초~1분 소요)', 'var(--amber)');
+
+    // 파일을 UTF-8 → base64 변환 (한글 인코딩 보장)
+    function utf8ToBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+
+    const filesBase64 = {};
+    for (const [filename, content] of Object.entries(files)) {
+      filesBase64[filename] = utf8ToBase64(content);
+    }
 
     const deployRes = await fetch('/api/deploy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectName, zipBase64: zipBlob }),
+      body: JSON.stringify({ projectName, filesBase64 }),
     });
 
     const deployText = await deployRes.text();
