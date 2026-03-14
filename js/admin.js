@@ -371,10 +371,10 @@ function renderRsvList() {
         '<span class="status-badge ' + s.cls + '">' + s.label + '</span>' +
       '</div>' +
       '<div class="rsv-actions">' +
-        '<button class="btn-confirm" onclick="updateRsv(' + r.id + ',\'confirmed\')">✅ 확정</button>' +
-        '<button class="btn-done" onclick="updateRsv(' + r.id + ',\'done\')">완료</button>' +
-        '<button class="btn-cancel" onclick="updateRsv(' + r.id + ',\'cancelled\')">❌ 취소</button>' +
-        '<button class="btn-delete" onclick="deleteRsv(' + r.id + ')">🗑</button>' +
+        '<button class="btn-confirm" data-id="' + r.id + '" data-st="confirmed" onclick="handleRsvBtn(this)">✅ 확정</button>' +
+        '<button class="btn-done" data-id="' + r.id + '" data-st="done" onclick="handleRsvBtn(this)">완료</button>' +
+        '<button class="btn-cancel" data-id="' + r.id + '" data-st="cancelled" onclick="handleRsvBtn(this)">❌ 취소</button>' +
+        '<button class="btn-delete" data-id="' + r.id + '" data-del="1" onclick="handleRsvBtn(this)">🗑</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -395,7 +395,7 @@ function renderDashRsv() {
         '</div>' +
         '<div style="display:flex;align-items:center;gap:8px">' +
           '<span class="status-badge ' + s.cls + '">' + s.label + '</span>' +
-          '<button class="btn-confirm" style="font-size:11px;padding:4px 10px" onclick="updateRsv(' + r.id + ',\'confirmed\')">확정</button>' +
+          '<button class="btn-confirm" style="font-size:11px;padding:4px 10px" data-id="' + r.id + '" data-st="confirmed" onclick="handleRsvBtn(this)">확정</button>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -499,6 +499,15 @@ function saveInfo() {
   };
   localStorage.setItem('info_' + SITE_ID, JSON.stringify(info));
   showToast('✅ 저장되었습니다');
+}
+
+
+function handleRsvBtn(el) {
+  var id = el.getAttribute('data-id');
+  var st = el.getAttribute('data-st');
+  var del = el.getAttribute('data-del');
+  if (del) { deleteRsv(id); }
+  else { updateRsv(id, st); }
 }
 
 // 토스트
