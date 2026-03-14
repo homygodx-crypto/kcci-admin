@@ -18,43 +18,56 @@ export async function onRequestPost(context) {
     if (!workerName) return new Response(JSON.stringify({error:'projectName required'}),{status:400,headers:cors});
     if (!filesBase64 || Object.keys(filesBase64).length===0) return new Response(JSON.stringify({error:'filesBase64 required'}),{status:400,headers:cors});
 
-    // base64 → 문자열 디코딩
-    const fileContents = {};
-    for (const [filename, b64] of Object.entries(filesBase64)) {
-      const binaryStr = atob(b64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i=0;i<binaryStr.length;i++) bytes[i]=binaryStr.charCodeAt(i);
-      fileContents[filename] = new TextDecoder('utf-8').decode(bytes);
-    }
-
-    // Worker 스크립트 생성 — URL 경로별 HTML 반환
-    const routeEntries = Object.entries(fileContents);
-    const routeCode = routeEntries.map(([f, content]) => {
-      const path = f === 'index.html' ? '/' : '/' + f;
+    // 각 파일의 base64를 그대로 Worker에 저장 (atob으로 디코딩)
+    const fileEntries = Object.entries(filesBase64).map(([f, b64]) => {
       const ct = getContentType(f);
-      return `  if (p === '${path}' || p === '/${f}') return new Response(${JSON.stringify(content)}, {headers:{'Content-Type':'${ct}; charset=utf-8','Cache-Control':'public,max-age=3600'}});`;
-    }).join('\n');
+      const path = f === 'index.html' ? '/' : '/' + f;
+      return { f, b64, ct, path };
+    });
 
-    const workerScript = `export default {
+    // Worker 스크립트 — base64 데이터를 변수로 저장 후 서빙
+    const dataLines = fileEntries.map(({f, b64}) =>
+      `  '${f}': '${b64}'`
+    ).join(',\n');
+
+    const routeLines = fileEntries.map(({f, ct, path}) =>
+      `  if (p === '${path}' || p === '/${f}') return serve(files['${f}'], '${ct}');`
+    ).join('\n');
+
+    const workerScript = `
+const files = {
+${dataLines}
+};
+
+function serve(b64, ct) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Response(bytes, {
+    headers: {'Content-Type': ct + '; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}
+  });
+}
+
+export default {
   async fetch(req) {
     const p = new URL(req.url).pathname;
-${routeCode}
-    return new Response(${JSON.stringify(fileContents['index.html']||'<h1>Not Found</h1>')}, {headers:{'Content-Type':'text/html; charset=utf-8'}});
+${routeLines}
+    return serve(files['index.html'], 'text/html');
   }
-};`;
+};`.trim();
 
-    // ① Worker 스크립트 업로드 (PUT)
+    // Worker 업로드
     const formData = new FormData();
-    formData.append('metadata', JSON.stringify({
+    formData.append('metadata', new Blob([JSON.stringify({
       main_module: 'worker.js',
       compatibility_date: '2024-09-23',
       bindings: [],
-    }), {type: 'application/json'});
-    formData.append('worker.js', new Blob([workerScript], {type:'application/javascript+module'}), 'worker.js');
+    })], {type: 'application/json'}), 'metadata');
+    formData.append('worker.js', new Blob([workerScript], {type: 'application/javascript+module'}), 'worker.js');
 
     const uploadRes = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts/${workerName}`,
-      { method: 'PUT', headers: {'Authorization': 'Bearer '+CF_TOKEN}, body: formData }
+      { method: 'PUT', headers: {'Authorization': 'Bearer ' + CF_TOKEN}, body: formData }
     );
 
     const uploadData = await uploadRes.json().catch(()=>({}));
@@ -62,12 +75,12 @@ ${routeCode}
       return new Response(JSON.stringify({error:'Worker 업로드 실패: '+(uploadData.errors?.[0]?.message||uploadRes.status)}),{status:500,headers:cors});
     }
 
-    // ② workers.dev 서브도메인 활성화 (POST)
+    // workers.dev 활성화
     await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/services/${workerName}/environments/production/subdomain`,
       {
         method: 'POST',
-        headers: {'Authorization': 'Bearer '+CF_TOKEN, 'Content-Type': 'application/json'},
+        headers: {'Authorization': 'Bearer ' + CF_TOKEN, 'Content-Type': 'application/json'},
         body: JSON.stringify({enabled: true}),
       }
     );
