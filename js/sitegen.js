@@ -83,6 +83,76 @@ function resetSgForm() {
 }
 
 // ── 데이터 객체 수집 ──
+
+// ── 업종별 기본 이미지 (Unsplash) ──
+const INDUSTRY_IMAGES = {
+  pilates: {
+    h1: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1600&q=80',
+    h2: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1600&q=80',
+    h3: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1600&q=80',
+    p1: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&q=80',
+    p2: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=800&q=80',
+    p3: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=800&q=80',
+    i1: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80',
+    i2: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=600&q=80',
+  },
+  cafe: {
+    h1: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1600&q=80',
+    h2: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1600&q=80',
+    h3: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=1600&q=80',
+    p1: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80',
+    p2: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&q=80',
+    p3: 'https://images.unsplash.com/photo-1608198093002-ad4e005484ec?w=800&q=80',
+    i1: 'https://images.unsplash.com/photo-1521019452999-f896e49e3dd2?w=600&q=80',
+    i2: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=600&q=80',
+  },
+  beauty: {
+    h1: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1600&q=80',
+    h2: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&q=80',
+    h3: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=1600&q=80',
+    p1: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=800&q=80',
+    p2: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&q=80',
+    p3: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+    i1: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=600&q=80',
+    i2: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?w=600&q=80',
+  },
+  medical: {
+    h1: 'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=1600&q=80',
+    h2: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=1600&q=80',
+    h3: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1600&q=80',
+    p1: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&q=80',
+    p2: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80',
+    p3: 'https://images.unsplash.com/photo-1571772996211-2f02c9727629?w=800&q=80',
+    i1: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80',
+    i2: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=600&q=80',
+  },
+  academy: {
+    h1: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1600&q=80',
+    h2: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1600&q=80',
+    h3: 'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=1600&q=80',
+    p1: 'https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=800&q=80',
+    p2: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80',
+    p3: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800&q=80',
+    i1: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&q=80',
+    i2: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=600&q=80',
+  },
+  general: {
+    h1: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&q=80',
+    h2: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1600&q=80',
+    h3: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=1600&q=80',
+    p1: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80',
+    p2: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80',
+    p3: 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=800&q=80',
+    i1: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80',
+    i2: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80',
+  },
+};
+
+function getDefaultImg(field) {
+  const tpl = sgV('sgTemplate') || 'pilates';
+  return (INDUSTRY_IMAGES[tpl] || INDUSTRY_IMAGES.general)[field] || '';
+}
+
 function buildSgDataObj() {
   return {
     name:         sgV('sgName') || '업체명',
@@ -95,32 +165,32 @@ function buildSgDataObj() {
     blog:         sgV('sgBlog') || '#',
     insta:        sgV('sgInsta') || '#',
     slogan:       sgV('sgSlogan') || '전문가와 함께하는 맞춤 서비스',
-    h1Img:        sgImgSrc(sgV('sgH1Img')),
+    h1Img:        sgImgSrc(sgV('sgH1Img')) || getDefaultImg('h1'),
     h1Title:      sgV('sgH1Title') || '전문적인|서비스',
-    h2Img:        sgImgSrc(sgV('sgH2Img')),
+    h2Img:        sgImgSrc(sgV('sgH2Img')) || getDefaultImg('h2'),
     h2Title:      sgV('sgH2Title') || '함께하는|성장',
-    h3Img:        sgImgSrc(sgV('sgH3Img')),
+    h3Img:        sgImgSrc(sgV('sgH3Img')) || getDefaultImg('h3'),
     h3Title:      sgV('sgH3Title') || '최고의|선택',
-    p1Img:        sgImgSrc(sgV('sgP1Img'), 'https://placehold.co/600x700/1B3A5C/C9A040?text=P1'),
+    p1Img:        sgImgSrc(sgV('sgP1Img')) || getDefaultImg('p1'),
     p1Tag:        sgV('sgP1Tag') || 'PROGRAM 1',
     p1Name:       sgV('sgP1Name') || '프로그램 1',
     p1Desc:       sgV('sgP1Desc') || '프로그램 설명',
     p1Detail:     sgV('sgP1Detail') || '상세 설명',
-    p2Img:        sgImgSrc(sgV('sgP2Img'), 'https://placehold.co/600x700/1B3A5C/C9A040?text=P2'),
+    p2Img:        sgImgSrc(sgV('sgP2Img')) || getDefaultImg('p2'),
     p2Tag:        sgV('sgP2Tag') || 'PROGRAM 2',
     p2Name:       sgV('sgP2Name') || '프로그램 2',
     p2Desc:       sgV('sgP2Desc') || '프로그램 설명',
     p2Detail:     sgV('sgP2Detail') || '상세 설명',
-    p3Img:        sgImgSrc(sgV('sgP3Img'), 'https://placehold.co/600x700/1B3A5C/C9A040?text=P3'),
+    p3Img:        sgImgSrc(sgV('sgP3Img')) || getDefaultImg('p3'),
     p3Tag:        sgV('sgP3Tag') || 'PROGRAM 3',
     p3Name:       sgV('sgP3Name') || '프로그램 3',
     p3Desc:       sgV('sgP3Desc') || '프로그램 설명',
     p3Detail:     sgV('sgP3Detail') || '상세 설명',
-    i1Img:        sgImgSrc(sgV('sgI1Img'), 'https://placehold.co/400x500/1B3A5C/C9A040?text=I1'),
+    i1Img:        sgImgSrc(sgV('sgI1Img')) || getDefaultImg('i1'),
     i1Role:       sgV('sgI1Role') || 'DIRECTOR',
     i1Name:       sgV('sgI1Name') || '원장님',
     i1Cert:       sgV('sgI1Cert') || '',
-    i2Img:        sgImgSrc(sgV('sgI2Img'), 'https://placehold.co/400x500/1B3A5C/C9A040?text=I2'),
+    i2Img:        sgImgSrc(sgV('sgI2Img')) || getDefaultImg('i2'),
     i2Role:       sgV('sgI2Role') || 'MANAGER',
     i2Name:       sgV('sgI2Name') || '실장님',
     i2Cert:       sgV('sgI2Cert') || '',
