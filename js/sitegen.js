@@ -371,9 +371,6 @@ async function deployToCloudflare() {
   const name = sgV('sgName');
   if (!name) { showToast('⚠️ 업체명을 입력하세요.', 'error'); return; }
 
-  const workerUrl = getWorkerUrl();
-  if (!workerUrl) { showToast('⚠️ 설정 탭에서 Worker URL을 먼저 입력하세요.', 'error'); return; }
-
   if (typeof JSZip === 'undefined') { showToast('⚠️ JSZip 로딩 중...', 'error'); return; }
 
   const tpl = sgV('sgTemplate') || 'pilates';
