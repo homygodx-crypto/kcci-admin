@@ -185,7 +185,9 @@ window.addEventListener('scroll',()=>{
   document.getElementById('floating').classList.toggle('show',scrollY>300);
 });
 function toggleNav(){document.getElementById('hamBtn').classList.toggle('open');document.getElementById('mobileNav').classList.toggle('open');}
-document.addEventListener('click',e=>{const b=document.getElementById('hamBtn'),n=document.getElementById('mobileNav');if(b&&n&&!b.contains(e.target)&&!n.contains(e.target)){b.classList.remove('open');n.classList.remove('open');}});`;
+document.addEventListener('click',e=>{const b=document.getElementById('hamBtn'),n=document.getElementById('mobileNav');if(b&&n&&!b.contains(e.target)&&!n.contains(e.target)){b.classList.remove('open');n.classList.remove('open');}});
+// 방문자 기록
+try{recordVisit(location.pathname.split('/').pop()||'index.html');}catch(e){}`;
 }
 
 function buildMedicalNaverWidget(d) {
