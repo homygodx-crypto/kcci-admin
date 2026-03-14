@@ -240,11 +240,11 @@ document.addEventListener('click',e=>{
 
 function buildBeautyNaverWidget(d) {
   if (!d.placeId) return '';
-  return `<section id="naverplace">
-  <div style="max-width:900px;margin:0 auto">
-    <div class="section-label">Review</div>
-    <h2 class="section-title" style="margin-bottom:32px">네이버 <em>리뷰</em></h2>
-    <div id="naver-place-widget"></div>
+  return `<section id="naverplace" style="padding:80px 64px;background:#F5F0F2;">
+  <div style="max-width:1000px;margin:0 auto">
+    <div class="section-label">Naver Place</div>
+    <h2 class="section-title" style="margin-bottom:40px">스마트플레이스 <em>리뷰</em></h2>
+    <div id="naver-place-widget" style="min-height:300px;background:#fff;padding:20px;box-shadow:0 2px 20px rgba(0,0,0,0.06)"></div>
   </div>
   <script>(function(){var s=document.createElement('script');s.src='https://place.map.naver.com/widget/v1/${d.placeId}?lang=ko';s.async=true;document.getElementById('naver-place-widget').appendChild(s);})();<\/script>
 </section>`;
