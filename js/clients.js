@@ -38,22 +38,37 @@ function renderClients() {
     return;
   }
 
-  tbody.innerHTML = list.map(c => `
-    <tr>
-      <td><strong style="font-size:13px">${c.name || '-'}</strong></td>
+  tbody.innerHTML = list.map(c => {
+    const hasUrl = c.url && c.url.trim();
+    const siteUrl = hasUrl ? (c.url.startsWith('http') ? c.url : 'https://'+c.url) : '';
+    const commentCount = (c.comments||[]).length;
+    return `<tr>
+      <td>
+        <strong style="font-size:13px">${c.name || '-'}</strong>
+        ${commentCount > 0 ? `<span style="margin-left:6px;font-size:10px;color:var(--gold);background:rgba(201,160,64,0.1);padding:1px 6px;border-radius:10px">💬${commentCount}</span>` : ''}
+      </td>
       <td style="color:var(--text2)">${c.owner || '-'}</td>
       <td style="color:var(--text2)">${c.phone || '-'}</td>
       <td>${c.industry || '-'}</td>
       <td>${statusBadge(c.status || 'active')}</td>
       <td>${dday(c.expiry)}</td>
       <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick="openEdit('${c.id}')">수정</button>
-          <button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="deleteClient('${c.id}')">삭제</button>
+        ${hasUrl
+          ? `<a href="${siteUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--gold);text-decoration:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${siteUrl}">🌐 ${c.url.replace(/^https?:\/\//,'')}</a>`
+          : `<span style="font-size:11px;color:var(--text3)">미배포</span>`
+        }
+      </td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="openEdit('${c.id}')">수정</button>
+          <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="openCommentModal('${c.id}')" title="코멘트">💬</button>
+          <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="openDomainModal('${c.id}')" title="도메인 변경">🔗</button>
+          ${hasUrl ? `<button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteSite('${c.id}')" title="홈페이지 삭제">🗑</button>` : ''}
+          <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteClient('${c.id}')">삭제</button>
         </div>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 function renderDashboard() {
@@ -231,4 +246,137 @@ function clearAllData() {
   renderClients();
   renderDashboard();
   showToast('전체 데이터가 삭제되었습니다.');
+}
+
+// ── 코멘트 모달 ──
+function openCommentModal(id) {
+  const client = clients.find(x => x.id === id);
+  if (!client) return;
+  if (!client.comments) client.comments = [];
+
+  const existing = document.getElementById('commentModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'commentModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+
+  const commentsHtml = client.comments.length === 0
+    ? '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">코멘트가 없습니다.</div>'
+    : client.comments.slice().reverse().map((cm, i) => `
+      <div style="border:1px solid var(--border);border-radius:4px;padding:12px 14px;margin-bottom:8px;background:var(--bg3);position:relative">
+        <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.6">${cm.text}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <span style="font-size:11px;color:var(--text3)">${new Date(cm.createdAt).toLocaleString('ko-KR')}</span>
+          <button onclick="deleteComment('${id}', ${client.comments.length - 1 - i})" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;padding:2px 6px">삭제</button>
+        </div>
+      </div>`).join('');
+
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column">
+      <div style="padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <h3 style="font-size:16px;color:var(--text)">💬 ${client.name} 코멘트</h3>
+        <button onclick="document.getElementById('commentModal').remove()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div style="padding:16px 20px;overflow-y:auto;flex:1">${commentsHtml}</div>
+      <div style="padding:16px 20px;border-top:1px solid var(--border)">
+        <textarea id="newComment" placeholder="코멘트를 입력하세요..." rows="3"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px;font-size:13px;font-family:inherit;resize:vertical;border-radius:4px;box-sizing:border-box"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+          <button class="btn btn-ghost" onclick="document.getElementById('commentModal').remove()">취소</button>
+          <button class="btn btn-primary" onclick="addComment('${id}')">💾 저장</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+}
+
+function addComment(id) {
+  const text = document.getElementById('newComment')?.value.trim();
+  if (!text) { showToast('코멘트를 입력하세요.', 'error'); return; }
+  const idx = clients.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  if (!clients[idx].comments) clients[idx].comments = [];
+  clients[idx].comments.push({ text, createdAt: new Date().toISOString() });
+  saveClients(clients);
+  showToast('✅ 코멘트 저장 완료', 'success');
+  document.getElementById('commentModal')?.remove();
+  renderClients();
+}
+
+function deleteComment(clientId, commentIdx) {
+  if (!confirm('이 코멘트를 삭제할까요?')) return;
+  const idx = clients.findIndex(x => x.id === clientId);
+  if (idx === -1) return;
+  clients[idx].comments.splice(commentIdx, 1);
+  saveClients(clients);
+  showToast('코멘트 삭제 완료');
+  document.getElementById('commentModal')?.remove();
+  renderClients();
+  openCommentModal(clientId);
+}
+
+// ── 도메인 변경 모달 ──
+function openDomainModal(id) {
+  const client = clients.find(x => x.id === id);
+  if (!client) return;
+
+  const existing = document.getElementById('domainModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'domainModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;width:100%;max-width:480px">
+      <div style="padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <h3 style="font-size:16px;color:var(--text)">🔗 ${client.name} 홈페이지 URL</h3>
+        <button onclick="document.getElementById('domainModal').remove()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div style="padding:20px">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">현재 URL: <span style="color:var(--gold)">${client.url || '미배포'}</span></div>
+        <div class="fg">
+          <label>새 홈페이지 URL</label>
+          <input type="text" id="newDomainUrl" value="${client.url || ''}"
+            placeholder="https://example.pages.dev 또는 https://도메인.com"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px;font-size:13px;font-family:inherit;box-sizing:border-box">
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:8px">
+          💡 Cloudflare Pages 자동 배포 후 생성된 URL 또는 연결한 커스텀 도메인을 입력하세요.
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+          <button class="btn btn-ghost" onclick="document.getElementById('domainModal').remove()">취소</button>
+          <button class="btn btn-primary" onclick="saveDomain('${id}')">💾 저장</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  document.getElementById('newDomainUrl')?.focus();
+}
+
+function saveDomain(id) {
+  const url = document.getElementById('newDomainUrl')?.value.trim();
+  const idx = clients.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  clients[idx].url = url;
+  saveClients(clients);
+  showToast('✅ URL 저장 완료', 'success');
+  document.getElementById('domainModal')?.remove();
+  renderClients();
+}
+
+// ── 홈페이지 삭제 ──
+function deleteSite(id) {
+  const client = clients.find(x => x.id === id);
+  if (!client) return;
+  if (!confirm(`'${client.name}' 홈페이지 URL을 삭제할까요?\n(Cloudflare Pages 프로젝트는 직접 삭제해야 합니다)`)) return;
+  const idx = clients.findIndex(x => x.id === id);
+  if (idx !== -1) {
+    clients[idx].url = '';
+    saveClients(clients);
+    renderClients();
+    showToast('✅ 홈페이지 URL 삭제 완료', 'success');
+  }
 }
