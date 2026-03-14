@@ -16,52 +16,53 @@ export async function onRequestPost(context) {
     const filesBase64 = body.filesBase64;
 
     if (!workerName) return new Response(JSON.stringify({error:'projectName required'}),{status:400,headers:cors});
-    if (!filesBase64 || Object.keys(filesBase64).length===0) return new Response(JSON.stringify({error:'filesBase64 required'}),{status:400,headers:cors});
+    if (!filesBase64) return new Response(JSON.stringify({error:'filesBase64 required'}),{status:400,headers:cors});
 
-    // 각 파일의 base64를 그대로 Worker에 저장 (atob으로 디코딩)
-    const fileEntries = Object.entries(filesBase64).map(([f, b64]) => {
-      const ct = getContentType(f);
+    // base64 → UTF-8 문자열 디코딩
+    const fileContents = {};
+    for (const [filename, b64] of Object.entries(filesBase64)) {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      fileContents[filename] = new TextDecoder('utf-8').decode(bytes);
+    }
+
+    // Worker 스크립트 — 문자열을 직접 Map에 저장
+    const entries = Object.entries(fileContents);
+    
+    // 각 파일을 별도 ES module export로 분리
+    const fileModules = entries.map(([f, content]) => {
+      const varName = f.replace(/[^a-zA-Z0-9]/g, '_');
+      return `const _${varName} = ${JSON.stringify(content)};`;
+    }).join('\n');
+
+    const routeLines = entries.map(([f]) => {
+      const varName = f.replace(/[^a-zA-Z0-9]/g, '_');
       const path = f === 'index.html' ? '/' : '/' + f;
-      return { f, b64, ct, path };
-    });
+      const ct = getContentType(f);
+      return `  if (p === '${path}' || p === '/${f}') return new Response(_${varName}, {headers: h('${ct}')});`;
+    }).join('\n');
 
-    // Worker 스크립트 — base64 데이터를 변수로 저장 후 서빙
-    const dataLines = fileEntries.map(({f, b64}) =>
-      `  '${f}': '${b64}'`
-    ).join(',\n');
+    const indexVar = '_' + 'index.html'.replace(/[^a-zA-Z0-9]/g, '_');
 
-    const routeLines = fileEntries.map(({f, ct, path}) =>
-      `  if (p === '${path}' || p === '/${f}') return serve(files['${f}'], '${ct}');`
-    ).join('\n');
+    const workerScript = `${fileModules}
 
-    const workerScript = `
-const files = {
-${dataLines}
-};
-
-function serve(b64, ct) {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Response(bytes, {
-    headers: {'Content-Type': ct + '; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}
-  });
-}
+const headers = (ct) => ({'Content-Type': ct + '; charset=utf-8', 'Cache-Control': 'public, max-age=3600'});
+const h = headers;
 
 export default {
   async fetch(req) {
     const p = new URL(req.url).pathname;
 ${routeLines}
-    return serve(files['index.html'], 'text/html');
+    return new Response(${indexVar}, {headers: h('text/html')});
   }
-};`.trim();
+};`;
 
     // Worker 업로드
     const formData = new FormData();
     formData.append('metadata', new Blob([JSON.stringify({
       main_module: 'worker.js',
       compatibility_date: '2024-09-23',
-      bindings: [],
     })], {type: 'application/json'}), 'metadata');
     formData.append('worker.js', new Blob([workerScript], {type: 'application/javascript+module'}), 'worker.js');
 
