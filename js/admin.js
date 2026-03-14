@@ -824,8 +824,8 @@ function toast(msg,type){
 </div>
 
 <div class="toast" id="toast"></div>
-<script id="siteData" type="application/json">${siteDataJson}<\/script>
-<script>${js}<\/script>
+<script id="siteData" type="application/json">${siteDataJson}${"</scr"+"ipt>"}
+<script>${js}${"</scr"+"ipt>"}
 </body>
 </html>`;
 }
