@@ -383,10 +383,13 @@ async function deployToCloudflare() {
 
   // 프로젝트명 생성 — URL 입력값 우선, 없으면 타임스탬프 기반으로 생성
   const urlVal = sgV('sgUrl')
+    .trim()
     .replace(/^https?:\/\//i, '')
-    .replace(/\.pages\.dev.*/,'')
-    .replace(/[^a-z0-9-]/g,'')
-    .substring(0,28);
+    .replace(/\.pages\.dev.*/i, '')
+    .replace(/\.workers\.dev.*/i, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+    .substring(0, 28);
   const projectName = urlVal || ('kcci-' + Date.now().toString(36).slice(-6));
 
   const btn = document.getElementById('deployBtn');
@@ -471,7 +474,7 @@ async function deployToCloudflare() {
       setStatus(`📤 업로드 중... (${uploadCount}/${Object.keys(files).length})`, 'var(--amber)');
     }
 
-    const cfUrl = `https://${projectName}.pages.dev`;
+    const cfUrl = 'https://' + projectName + '.pages.dev';
 
     // 업체 목록에 URL 자동 저장
     const clients = loadClients();
