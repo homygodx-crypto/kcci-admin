@@ -62,6 +62,7 @@ function renderClients() {
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="openEdit('${c.id}')">수정</button>
           <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="openCommentModal('${c.id}')" title="코멘트">💬</button>
+          <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="openServiceLogModal('${c.id}')" title="서비스 이력">📋</button>
           <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="openDomainModal('${c.id}')" title="도메인 변경">🔗</button>
           ${hasUrl ? `<button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteSite('${c.id}')" title="홈페이지 삭제">🗑</button>` : ''}
           <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteClient('${c.id}')">삭제</button>
@@ -429,6 +430,181 @@ async function deleteSite(id) {
     renderClients();
     showToast('✅ 홈페이지 삭제 완료');
 
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+}
+
+// ── 서비스 이력 모달 ──
+function openServiceLogModal(clientId) {
+  const clients = loadClients();
+  const client = clients.find(c => c.id === clientId);
+  if (!client) return;
+
+  const existing = document.getElementById('serviceLogModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'serviceLogModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#fff;width:640px;max-width:95vw;max-height:90vh;overflow-y:auto;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="padding:20px 24px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;">
+        <h3 style="font-size:16px;font-weight:700;color:var(--navy)">📋 서비스 이력 — ${client.name}</h3>
+        <button onclick="document.getElementById('serviceLogModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+      </div>
+      <div style="padding:24px;">
+        <!-- 등록 폼 -->
+        <div style="background:#f8f9fa;border-radius:6px;padding:20px;margin-bottom:24px;">
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">+ 서비스 이력 등록</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:11px;color:#999;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;">서비스 유형</label>
+              <select id="slogType" style="width:100%;padding:9px 12px;border:1.5px solid #eee;border-radius:4px;font-size:13px;font-family:inherit;background:#fff;">
+                <option value="homepage">🌐 홈페이지 제작/배포</option>
+                <option value="kcci">🏆 KCCI 보고서 발행</option>
+                <option value="contract">📝 계약 체결</option>
+                <option value="payment">💰 결제 내역</option>
+                <option value="consult">💬 상담 기록</option>
+                <option value="other">📋 기타</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#999;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;">금액 (선택)</label>
+              <input type="number" id="slogAmount" placeholder="예) 300000" style="width:100%;padding:9px 12px;border:1.5px solid #eee;border-radius:4px;font-size:13px;font-family:inherit;">
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px;color:#999;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;">제목 *</label>
+            <input type="text" id="slogTitle" placeholder="예) 홈페이지 최초 배포" style="width:100%;padding:9px 12px;border:1.5px solid #eee;border-radius:4px;font-size:13px;font-family:inherit;">
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:11px;color:#999;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;">상세 내용</label>
+            <textarea id="slogDesc" placeholder="서비스 내용을 입력하세요" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid #eee;border-radius:4px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+          </div>
+          <button onclick="addServiceLog('${clientId}')" style="background:var(--gold);color:#fff;border:none;padding:10px 24px;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 등록</button>
+        </div>
+        <!-- 이력 목록 -->
+        <div id="slogListWrap">
+          <div style="text-align:center;padding:20px;color:#ccc;">불러오는 중...</div>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  loadServiceLogList(clientId);
+}
+
+async function loadServiceLogList(clientId) {
+  const wrap = document.getElementById('slogListWrap');
+  if (!wrap) return;
+
+  const SB_URL = 'https://vugtupipbpfundipgcqc.supabase.co';
+  const SB_KEY = 'sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S';
+
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/service_logs?site_id=eq.${clientId}&order=created_at.desc&limit=100`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Accept': 'application/json' }
+    });
+    const rows = await res.json();
+
+    if (!rows.length) {
+      wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#ccc;font-size:14px;">등록된 서비스 이력이 없습니다.</div>';
+      return;
+    }
+
+    const TYPES = {
+      homepage: '🌐 홈페이지',
+      kcci: '🏆 KCCI 보고서',
+      contract: '📝 계약',
+      payment: '💰 결제',
+      consult: '💬 상담',
+      other: '📋 기타',
+    };
+    const COLORS = {
+      homepage: '#EBF5FF;color:#2980B9',
+      kcci: '#FFF7E6;color:#B7791F',
+      contract: '#F0FFF4;color:#1A8A4A',
+      payment: '#F3E8FF;color:#7C3AED',
+      consult: '#FEF3F2;color:#C0392B',
+      other: '#F5F5F5;color:#666',
+    };
+
+    wrap.innerHTML = rows.map(r => {
+      const t = r.type || 'other';
+      const dt = new Date(r.created_at).toLocaleDateString('ko-KR');
+      const col = COLORS[t] || COLORS.other;
+      return `<div style="border:1px solid #f0f0f0;border-radius:6px;padding:14px 18px;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;background:${col.split(';')[0].replace('background:','')};color:${col.split('color:')[1]}">${TYPES[t]||t}</span>
+            <span style="font-size:14px;font-weight:700;color:#222;">${r.title||'-'}</span>
+          </div>
+          ${r.description ? `<div style="font-size:13px;color:#666;line-height:1.6;">${r.description}</div>` : ''}
+          ${r.amount ? `<div style="margin-top:6px;font-size:12px;color:#7C3AED;font-weight:700;">💰 ${Number(r.amount).toLocaleString()}원</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+          <span style="font-size:12px;color:#aaa;">${dt}</span>
+          <button data-id="${r.id}" onclick="deleteServiceLog(this.dataset.id,'${clientId}')" style="background:none;border:1px solid #eee;color:#ccc;padding:3px 8px;font-size:11px;cursor:pointer;border-radius:3px;">삭제</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    wrap.innerHTML = `<div style="text-align:center;padding:20px;color:#e74c3c;font-size:14px;">⚠️ ${e.message}</div>`;
+  }
+}
+
+async function addServiceLog(clientId) {
+  const type    = document.getElementById('slogType').value;
+  const title   = document.getElementById('slogTitle').value.trim();
+  const desc    = document.getElementById('slogDesc').value.trim();
+  const amount  = document.getElementById('slogAmount').value;
+
+  if (!title) { alert('제목을 입력해주세요.'); return; }
+
+  const SB_URL = 'https://vugtupipbpfundipgcqc.supabase.co';
+  const SB_KEY = 'sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S';
+
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/service_logs`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        site_id: clientId, type, title,
+        description: desc || null,
+        amount: amount ? Number(amount) : null,
+      })
+    });
+    if (!res.ok) throw new Error('저장 실패 (' + res.status + ')');
+
+    // 폼 초기화
+    document.getElementById('slogTitle').value = '';
+    document.getElementById('slogDesc').value = '';
+    document.getElementById('slogAmount').value = '';
+    showToast('✅ 서비스 이력 등록 완료');
+    loadServiceLogList(clientId);
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+}
+
+async function deleteServiceLog(logId, clientId) {
+  if (!confirm('이 이력을 삭제할까요?')) return;
+
+  const SB_URL = 'https://vugtupipbpfundipgcqc.supabase.co';
+  const SB_KEY = 'sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S';
+
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/service_logs?id=eq.${logId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    if (!res.ok) throw new Error('삭제 실패');
+    showToast('🗑 삭제되었습니다');
+    loadServiceLogList(clientId);
   } catch(e) {
     showToast('❌ ' + e.message, 'error');
   }
