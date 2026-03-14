@@ -377,14 +377,9 @@ async function deployToCloudflare() {
   const d = buildSgDataObj();
   const pages = buildAllPages(tpl, d);
 
-  // 프로젝트명 생성 (영문 소문자 + 숫자 + 하이픈)
-  const projectName = (sgV('sgUrl') || name)
-    .toLowerCase()
-    .replace(/\.pages\.dev.*/, '')
-    .replace(/[^a-z0-9]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 28);
+  // 프로젝트명 생성 — URL 입력값 우선, 없으면 타임스탬프 기반으로 생성
+  const urlVal = sgV('sgUrl').replace(/\.pages\.dev.*/,'').replace(/[^a-z0-9-]/g,'').substring(0,20);
+  const projectName = urlVal || ('kcci-' + Date.now().toString(36).slice(-6));
 
   const btn = document.getElementById('deployBtn');
   const statusEl = document.getElementById('deployStatus');
