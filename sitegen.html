@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>홈페이지 생성 — KCCI Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+.sg-prog-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.sg-instr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.prog-label { font-size: 11px; color: var(--gold); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
+/* 이미지 업로드 버튼 */
+.img-upload-wrap { display:flex; gap:6px; align-items:flex-start; }
+.img-upload-wrap input[type=text] { flex:1; }
+/* 텍스트 크기 조절 버튼 */
+.fs-ctrl { display:flex; align-items:center; gap:6px; }
+.fs-btn { background:var(--bg2); border:1px solid var(--border); color:var(--text3); padding:5px 12px; font-size:12px; cursor:pointer; font-family:inherit; border-radius:3px; transition:all .15s; font-weight:600; }
+.fs-btn:hover { background:var(--bg3); color:var(--text); }
+.fs-btn.active { background:var(--gold); color:#000; border-color:var(--gold); }
+.fs-val { font-size:11px; color:var(--text3); min-width:36px; text-align:right; font-family:monospace; }
+.ai-box {
+  background: linear-gradient(135deg,rgba(201,160,64,.08),rgba(201,160,64,.03));
+  border: 1px solid rgba(201,160,64,.3);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.ai-box-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ai-box-head .title { font-size: 14px; font-weight: 500; }
+.ai-box-head .sub { font-size: 12px; color: var(--text3); }
+#aiKeyBadge { margin-left:auto; font-size:11px; padding:4px 10px; border:1px solid var(--border); color:var(--text3); border-radius:20px; }
+.result-file { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); margin-bottom:2px; border-radius:4px; }
+/* 미리보기 모달 */
+#previewModal { display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,.85); flex-direction:column; }
+.pv-toolbar { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; background:var(--bg2); border-bottom:1px solid var(--border); flex-shrink:0; gap:10px; flex-wrap:wrap; }
+.pv-toolbar-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.pv-frame-wrap { flex:1; display:flex; align-items:center; justify-content:center; padding:12px; overflow:hidden; }
+#pvWrapper { width:100%; height:100%; transition:width .3s; }
+#pvFrame { width:100%; height:100%; border:none; background:#fff; display:block; }
+.pv-close { background:none; border:none; color:var(--text3); font-size:22px; cursor:pointer; padding:4px; }
+@media(max-width:900px){ .sg-prog-row{grid-template-columns:1fr;} .sg-instr-row{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <span class="sb-logo-name">KCCI Master</span>
+      <span class="sb-logo-sub">운영 관리 시스템</span>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-sec">메인</div>
+      <a href="dashboard.html" class="sb-item"><span class="ic">📊</span><span>대시보드</span></a>
+      <a href="reservations.html" class="sb-item"><span class="ic">📅</span><span>예약 관리</span></a>
+      <div class="sb-sec">도구</div>
+      <a href="sitegen.html" class="sb-item active"><span class="ic">🚀</span><span>홈페이지 생성</span></a>
+      <a href="settings.html" class="sb-item"><span class="ic">⚙️</span><span>설정</span></a>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-logout" onclick="logout()"><span>🚪</span><span>로그아웃</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">홈페이지 생성</span>
+      <div class="topbar-right">
+        <span class="topbar-badge" id="aiKeyBadge">API 키 미설정</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- AI 자동완성 -->
+      <div class="ai-box" style="display:none">
+        <div class="ai-box-head">
+          <span style="font-size:20px">🤖</span>
+          <div><div class="title">AI 자동 완성</div><div class="sub">업체 정보를 메모처럼 입력하면 AI가 모든 텍스트를 작성해드립니다</div></div>
+        </div>
+        <textarea id="sgAiMemo" style="width:100%;min-height:96px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:12px;font-size:13px;font-family:inherit;resize:vertical;line-height:1.8;border-radius:4px" placeholder="예시) 소예 필라테스 평생교육원 / 경기 고양시 일산동구&#10;원장 박효미, 경력 15년, BASI 자격증&#10;척추측만증·뇌신경·재활 전문&#10;1:1 프라이빗 / 3:1 소그룹 / 키즈 수업&#10;주차 편리"></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="runAiFill()" id="aiFillBtn">✨ AI로 폼 자동 완성</button>
+          <span id="aiStatus" style="font-size:13px;color:var(--text3)"></span>
+        </div>
+      </div>
+
+      <!-- ① 기본 정보 -->
+      <div class="sg-section">
+        <div class="sg-section-head open" onclick="toggleSgSection(this)"><h4>① 업체 선택 &amp; 기본 정보</h4><span class="toggle-ic">▼</span></div>
+        <div class="sg-section-body open">
+          <div class="fg-row" style="margin-bottom:14px">
+            <div class="fg">
+              <label>등록된 업체에서 불러오기</label>
+              <select id="sgClientSelect" onchange="loadClientToForm(this.value)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;font-size:13px;font-family:inherit;border-radius:4px;width:100%">
+                <option value="">— 업체 선택 시 정보 자동 입력 —</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>업종 템플릿</label>
+              <select id="sgTemplate" onchange="onTemplateChange()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;font-size:13px;font-family:inherit;border-radius:4px;width:100%">
+                <option value="pilates">🧘 필라테스 / 요가</option>
+                <option value="cafe">☕ 카페 / 음식점</option>
+                <option value="beauty">💄 미용 / 뷰티</option>
+                <option value="medical">🏥 한의원 / 의원</option>
+                <option value="academy">📚 학원 / 교육</option>
+                <option value="general">🏪 일반 소매업</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg-row">
+            <div class="fg"><label>업체명 *</label><input type="text" id="sgName" placeholder="예) 소예 필라테스 평생교육원"></div>
+            <div class="fg"><label>영문 브랜드명</label><input type="text" id="sgNameEn" placeholder="예) SOYAE PILATES"></div>
+          </div>
+          <div class="fg-row">
+            <div class="fg"><label>사장님 / 대표자</label><input type="text" id="sgOwner" placeholder="예) 박효미 원장"></div>
+            <div class="fg"><label>전화번호 *</label><input type="text" id="sgPhone" placeholder="예) 0507-1359-9879"></div>
+          </div>
+          <div class="fg"><label>주소 *</label><input type="text" id="sgAddress" placeholder="예) 경기 고양시 일산동구 위시티로 55, 2층 103호"></div>
+          <div class="fg-row">
+            <div class="fg"><label>네이버 지도 Place ID</label><input type="text" id="sgPlaceId" placeholder="예) 1432185533" style="font-family:monospace;font-size:12px"></div>
+            <div class="fg"><label>홈페이지 URL (예정)</label><input type="text" id="sgUrl" placeholder="예) soyae.pages.dev"></div>
+          </div>
+          <div class="fg-row">
+            <div class="fg"><label>네이버 블로그</label><input type="text" id="sgBlog" placeholder="blog.naver.com/..."></div>
+            <div class="fg"><label>인스타그램</label><input type="text" id="sgInsta" placeholder="instagram.com/..."></div>
+          </div>
+          <div class="fg"><label>슬로건 / 한 줄 소개</label><input type="text" id="sgSlogan" placeholder="예) 척추측만증 · 뇌신경 · 재활 전문 필라테스"></div>
+        </div>
+      </div>
+
+      <!-- ② 히어로 슬라이드 -->
+      <div class="sg-section">
+        <div class="sg-section-head" onclick="toggleSgSection(this)"><h4>② 히어로 슬라이드</h4><span class="toggle-ic">▼</span></div>
+        <div class="sg-section-body">
+          <div class="fg-row" style="margin-bottom:12px">
+            <div class="fg"><label>슬라이드 1 이미지 URL</label><div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="sgH1Img" placeholder="이미지 URL 또는 업로드" style="font-family:monospace;font-size:11px;flex:1">
+                <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이미지 업로드">
+                  📷<input type="file" accept="image/*" onchange="uploadSgImg(this,'sgH1Img')" style="display:none">
+                </label>
+              </div>
+              <div id="sgH1Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgH1Img_previewImg"></div></div>
+            <div class="fg"><label>메인 제목 (|로 줄바꿈)</label><input type="text" id="sgH1Title" placeholder="예) 신경계 발달|실전 필라테스"></div>
+          </div>
+          <div class="fg-row" style="margin-bottom:12px">
+            <div class="fg"><label>슬라이드 2 이미지 URL</label><div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="sgH2Img" placeholder="이미지 URL 또는 업로드" style="font-family:monospace;font-size:11px;flex:1">
+                <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이미지 업로드">
+                  📷<input type="file" accept="image/*" onchange="uploadSgImg(this,'sgH2Img')" style="display:none">
+                </label>
+              </div>
+              <div id="sgH2Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgH2Img_previewImg"></div></div>
+            <div class="fg"><label>메인 제목</label><input type="text" id="sgH2Title"></div>
+          </div>
+          <div class="fg-row">
+            <div class="fg"><label>슬라이드 3 이미지 URL</label><div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="sgH3Img" placeholder="이미지 URL 또는 업로드" style="font-family:monospace;font-size:11px;flex:1">
+                <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이미지 업로드">
+                  📷<input type="file" accept="image/*" onchange="uploadSgImg(this,'sgH3Img')" style="display:none">
+                </label>
+              </div>
+              <div id="sgH3Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgH3Img_previewImg"></div></div>
+            <div class="fg"><label>메인 제목</label><input type="text" id="sgH3Title"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ 프로그램 -->
+      <div class="sg-section" id="sgSection_sub">
+        <div class="sg-section-head" onclick="toggleSgSection(this)"><h4>③ 프로그램 / 메뉴 / 시술 (최대 3개)</h4><span class="toggle-ic">▼</span></div>
+        <div class="sg-section-body">
+          <div class="sg-prog-row">
+            <div><div class="prog-label">No. 1</div>
+              <div class="fg"><label>이미지</label><div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="sgP1Img" placeholder="이미지 URL 또는 업로드" style="font-family:monospace;font-size:11px;flex:1">
+                <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이미지 업로드">
+                  📷<input type="file" accept="image/*" onchange="uploadSgImg(this,'sgP1Img')" style="display:none">
+                </label>
+              </div>
+              <div id="sgP1Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgP1Img_previewImg"></div></div>
+              <div class="fg"><label>태그</label><input type="text" id="sgP1Tag" placeholder="예) PRIVATE CLASS"></div>
+              <div class="fg"><label>이름</label><input type="text" id="sgP1Name" placeholder="예) 1:1 프라이빗"></div>
+              <div class="fg"><label>한 줄 설명</label><textarea id="sgP1Desc" style="min-height:52px"></textarea></div>
+              <div class="fg"><label>상세 설명</label><textarea id="sgP1Detail"></textarea></div>
+            </div>
+            <div><div class="prog-label">No. 2</div>
+              <div class="fg"><label>이미지</label><div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="sgP2Img" placeholder="이미지 URL 또는 업로드" style="font-family:monospace;font-size:11px;flex:1">
+                <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이미지 업로드">
+                  📷<input type="file" accept="image/*" onchange="uploadSgImg(this,'sgP2Img')" style="display:none">
+                </label>
+              </div>
+              <div id="sgP2Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgP2Img_previewImg"></div></div>
+              <div class="fg"><label>태그</label><input type="text" id="sgP2Tag"></div>
+              <div class="fg"><label>이름</label><input type="text" id="sgP2Name"></div>
+              <div class="fg"><label>한 줄 설명</label><textarea id="sgP2Desc" style="min-height:52px"></textarea></div>
+              <div class="fg"><label>상세 설명</label><textarea id="sgP2Detail"></textarea></div>
+            </div>
+            <div><div class="prog-label">No. 3</div>
+              <div class="fg"><label>이미지</label><div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="sgP3Img" placeholder="이미지 URL 또는 업로드" style="font-family:monospace;font-size:11px;flex:1">
+                <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이미지 업로드">
+                  📷<input type="file" accept="image/*" onchange="uploadSgImg(this,'sgP3Img')" style="display:none">
+                </label>
+              </div>
+              <div id="sgP3Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgP3Img_previewImg"></div></div>
+              <div class="fg"><label>태그</label><input type="text" id="sgP3Tag"></div>
+              <div class="fg"><label>이름</label><input type="text" id="sgP3Name"></div>
+              <div class="fg"><label>한 줄 설명</label><textarea id="sgP3Desc" style="min-height:52px"></textarea></div>
+              <div class="fg"><label>상세 설명</label><textarea id="sgP3Detail"></textarea></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ 강사 -->
+      <div class="sg-section" id="sgSection_staff">
+        <div class="sg-section-head" onclick="toggleSgSection(this)"><h4>④ 강사 / 스태프 (최대 2명)</h4><span class="toggle-ic">▼</span></div>
+        <div class="sg-section-body">
+          <div class="sg-instr-row">
+            <div><div class="prog-label">Instructor 1</div>
+              <div class="fg"><label>사진</label><div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="sgI1Img" placeholder="이미지 URL 또는 업로드" style="font-family:monospace;font-size:11px;flex:1">
+                <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이미지 업로드">
+                  📷<input type="file" accept="image/*" onchange="uploadSgImg(this,'sgI1Img')" style="display:none">
+                </label>
+              </div>
+              <div id="sgI1Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgI1Img_previewImg"></div></div>
+              <div class="fg-row">
+                <div class="fg"><label>직책</label><input type="text" id="sgI1Role" placeholder="DIRECTOR"></div>
+                <div class="fg"><label>이름</label><input type="text" id="sgI1Name" placeholder="박효미 원장"></div>
+              </div>
+              <div class="fg"><label class="cert-label">자격증 (줄바꿈으로 구분)</label><textarea id="sgI1Cert" style="min-height:90px"></textarea></div>
+            </div>
+            <div><div class="prog-label">Instructor 2</div>
+              <div class="fg"><label>사진</label><div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="sgI2Img" placeholder="이미지 URL 또는 업로드" style="font-family:monospace;font-size:11px;flex:1">
+                <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이미지 업로드">
+                  📷<input type="file" accept="image/*" onchange="uploadSgImg(this,'sgI2Img')" style="display:none">
+                </label>
+              </div>
+              <div id="sgI2Img_preview" style="display:none;margin-top:6px"><img style="max-height:80px;max-width:100%;border-radius:3px;border:1px solid var(--border)" id="sgI2Img_previewImg"></div></div>
+              <div class="fg-row">
+                <div class="fg"><label>직책</label><input type="text" id="sgI2Role" placeholder="MANAGER"></div>
+                <div class="fg"><label>이름</label><input type="text" id="sgI2Name" placeholder="이솔 실장"></div>
+              </div>
+              <div class="fg"><label class="cert-label">자격증 (줄바꿈으로 구분)</label><textarea id="sgI2Cert" style="min-height:90px"></textarea></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ 추가 정보 -->
+      <div class="sg-section" id="sgSection_extra">
+        <div class="sg-section-head" onclick="toggleSgSection(this)"><h4>⑤ 추가 정보 (카페 / 의원 등)</h4><span class="toggle-ic">▼</span></div>
+        <div class="sg-section-body">
+          <div class="fg-row">
+            <div class="fg"><label>운영시간</label><input type="text" id="sgOpenHours" placeholder="매일 09:00 – 21:00"></div>
+            <div class="fg"><label>라스트오더 / 점심시간</label><input type="text" id="sgLastOrder" placeholder="마감 30분 전"></div>
+          </div>
+          <div class="fg"><label>주차 안내</label><input type="text" id="sgParking" placeholder="전용 주차 10대 가능"></div>
+          <div style="font-size:11px;color:var(--text3);margin:12px 0 10px;letter-spacing:.06em" id="sgReviewLabel">⭐ 고객 후기</div>
+          <div class="fg-row">
+            <div class="fg"><label>후기 1</label><textarea id="sgReview1" style="min-height:52px"></textarea></div>
+            <div class="fg"><label>작성자</label><input type="text" id="sgReview1Who" placeholder="네이버 방문자"></div>
+          </div>
+          <div class="fg-row">
+            <div class="fg"><label>후기 2</label><textarea id="sgReview2" style="min-height:52px"></textarea></div>
+            <div class="fg"><label>작성자</label><input type="text" id="sgReview2Who" placeholder="네이버 방문자"></div>
+          </div>
+          <div class="fg-row">
+            <div class="fg"><label>후기 3</label><textarea id="sgReview3" style="min-height:52px"></textarea></div>
+            <div class="fg"><label>작성자</label><input type="text" id="sgReview3Who" placeholder="네이버 방문자"></div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- 갤러리 이미지 -->
+      <div class="sg-section">
+        <div class="sg-section-head" onclick="toggleSgSection(this)"><h4>🖼 갤러리 이미지</h4><span class="toggle-ic">▼</span></div>
+        <div class="sg-section-body">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+            이미지를 업로드하면 갤러리 페이지에 자동으로 포함됩니다. (최대 12장)
+          </div>
+          <div id="sgGalleryGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px"></div>
+          <label class="btn btn-ghost" style="cursor:pointer;font-size:13px">
+            + 갤러리 이미지 추가
+            <input type="file" accept="image/*" multiple onchange="uploadSgGallery(this)" style="display:none">
+          </label>
+          <input type="hidden" id="sgGalleryUrls" value="[]">
+        </div>
+      </div>
+
+      <!-- 텍스트 크기 설정 -->
+      <div class="sg-section">
+        <div class="sg-section-head" onclick="toggleSgSection(this)"><h4>🔤 텍스트 크기 설정</h4><span class="toggle-ic">▼</span></div>
+        <div class="sg-section-body">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:20px">각 영역별 텍스트 크기를 조절하세요. 생성된 홈페이지에 반영됩니다.</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">
+              <span style="font-size:13px">히어로 메인 제목</span>
+              <div class="fs-ctrl" data-field="sgFsHero">
+                <button onclick="setSgFs('sgFsHero',52)" class="fs-btn">S</button>
+                <button onclick="setSgFs('sgFsHero',68)" class="fs-btn active">M</button>
+                <button onclick="setSgFs('sgFsHero',84)" class="fs-btn">L</button>
+                <span class="fs-val">68px</span>
+                <input type="hidden" id="sgFsHero" value="68">
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">
+              <span style="font-size:13px">섹션 제목</span>
+              <div class="fs-ctrl" data-field="sgFsSection">
+                <button onclick="setSgFs('sgFsSection',28)" class="fs-btn">S</button>
+                <button onclick="setSgFs('sgFsSection',36)" class="fs-btn active">M</button>
+                <button onclick="setSgFs('sgFsSection',44)" class="fs-btn">L</button>
+                <span class="fs-val">36px</span>
+                <input type="hidden" id="sgFsSection" value="36">
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">
+              <span style="font-size:13px">카드 / 메뉴 제목</span>
+              <div class="fs-ctrl" data-field="sgFsCard">
+                <button onclick="setSgFs('sgFsCard',18)" class="fs-btn">S</button>
+                <button onclick="setSgFs('sgFsCard',22)" class="fs-btn active">M</button>
+                <button onclick="setSgFs('sgFsCard',26)" class="fs-btn">L</button>
+                <span class="fs-val">22px</span>
+                <input type="hidden" id="sgFsCard" value="22">
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">
+              <span style="font-size:13px">본문 텍스트</span>
+              <div class="fs-ctrl" data-field="sgFsBody">
+                <button onclick="setSgFs('sgFsBody',13)" class="fs-btn">S</button>
+                <button onclick="setSgFs('sgFsBody',15)" class="fs-btn active">M</button>
+                <button onclick="setSgFs('sgFsBody',17)" class="fs-btn">L</button>
+                <span class="fs-val">15px</span>
+                <input type="hidden" id="sgFsBody" value="15">
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">
+              <span style="font-size:13px">네비게이션 / 레이블</span>
+              <div class="fs-ctrl" data-field="sgFsNav">
+                <button onclick="setSgFs('sgFsNav',11)" class="fs-btn">S</button>
+                <button onclick="setSgFs('sgFsNav',13)" class="fs-btn active">M</button>
+                <button onclick="setSgFs('sgFsNav',15)" class="fs-btn">L</button>
+                <span class="fs-val">13px</span>
+                <input type="hidden" id="sgFsNav" value="13">
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">
+              <span style="font-size:13px">후기 / 인용 텍스트</span>
+              <div class="fs-ctrl" data-field="sgFsReview">
+                <button onclick="setSgFs('sgFsReview',13)" class="fs-btn">S</button>
+                <button onclick="setSgFs('sgFsReview',15)" class="fs-btn active">M</button>
+                <button onclick="setSgFs('sgFsReview',17)" class="fs-btn">L</button>
+                <span class="fs-val">15px</span>
+                <input type="hidden" id="sgFsReview" value="15">
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">
+              <span style="font-size:13px">푸터 텍스트</span>
+              <div class="fs-ctrl" data-field="sgFsFooter">
+                <button onclick="setSgFs('sgFsFooter',11)" class="fs-btn">S</button>
+                <button onclick="setSgFs('sgFsFooter',13)" class="fs-btn active">M</button>
+                <button onclick="setSgFs('sgFsFooter',15)" class="fs-btn">L</button>
+                <span class="fs-val">13px</span>
+                <input type="hidden" id="sgFsFooter" value="13">
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-ghost" onclick="resetSgFs()" style="margin-top:14px;font-size:12px">기본값으로 초기화</button>
+        </div>
+      </div>
+
+      <!-- ⑥ 관리자 설정 -->
+      <div class="sg-section">
+        <div class="sg-section-head" onclick="toggleSgSection(this)"><h4>⑥ 관리자 페이지 설정</h4><span class="toggle-ic">▼</span></div>
+        <div class="sg-section-body">
+          <div class="fg-row">
+            <div class="fg"><label>관리자 아이디</label><input type="text" id="sgAdminId" value="admin"></div>
+            <div class="fg"><label>관리자 비밀번호</label><input type="text" id="sgAdminPw" value="thdP1234"><div class="hint">※ 사장님께 따로 전달하세요</div></div>
+          </div>
+          <div class="fg-row">
+            <div class="fg"><label>Supabase URL (이미지 저장)</label><input type="text" id="sgCloudName" placeholder="https://xxx.supabase.co" style="font-family:monospace;font-size:11px"></div>
+            <div class="fg"><label>Supabase Key</label><input type="text" id="sgUploadPreset" placeholder="sb_publishable_..." style="font-family:monospace;font-size:11px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 생성 버튼 -->
+      <div class="progress-bar"><div class="progress-fill" id="sgProgress"></div></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="generateSiteZip()" style="padding:14px 28px;font-size:15px">🚀 ZIP 생성 &amp; 다운로드</button>
+        <button class="btn btn-primary" onclick="deployToCloudflare()" id="deployBtn" style="padding:14px 28px;font-size:15px;background:var(--blue)">🌐 Cloudflare 자동 배포</button>
+        <button class="btn btn-ghost" onclick="openSgPreview()" style="padding:14px 20px;font-size:15px">👁 미리보기</button>
+        <button class="btn btn-ghost" onclick="resetSgForm()">초기화</button>
+      </div>
+      <div id="deployStatus" style="margin-top:12px;font-size:13px;line-height:1.8"></div>
+
+      <!-- 결과 -->
+      <div id="sgResultWrap" style="display:none;margin-top:20px">
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-head"><h3>✅ 생성 완료</h3></div>
+          <div class="card-body"><div id="sgFileList"></div></div>
+        </div>
+        <div style="background:rgba(201,160,64,.08);border:1px solid rgba(201,160,64,.3);padding:16px 20px;font-size:13px;color:var(--text2);line-height:2;border-radius:var(--radius)">
+          📋 <strong style="color:var(--text)">다음 단계</strong><br>
+          1. ZIP 압축 해제<br>
+          2. <a href="https://pages.cloudflare.com" target="_blank" style="color:var(--gold)">pages.cloudflare.com</a> → Direct Upload → ZIP 업로드<br>
+          3. 사장님께 사이트 주소 + admin.html 비밀번호 전달
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 미리보기 모달 -->
+<div id="previewModal">
+  <div class="pv-toolbar">
+    <div class="pv-toolbar-left">
+      <span style="font-size:14px;font-weight:500">👁 미리보기</span>
+      <div style="display:flex;gap:4px">
+        <button onclick="setPvSize('100%')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;border-radius:4px">💻</button>
+        <button onclick="setPvSize('768px')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;border-radius:4px">📱</button>
+        <button onclick="setPvSize('375px')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;border-radius:4px">📲</button>
+      </div>
+      <div id="pvPageTabs" style="display:flex;gap:4px"></div>
+    </div>
+    <button class="pv-close" onclick="closeSgPreview()">✕</button>
+  </div>
+  <div class="pv-frame-wrap">
+    <div id="pvWrapper"><iframe id="pvFrame"></iframe></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- 스크립트 로드 순서 중요 -->
+<script src="js/core.js"></script>
+<script src="js/industry.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/templates/pilates.js"></script>
+<script src="js/templates/cafe.js"></script>
+<script src="js/templates/beauty.js"></script>
+<script src="js/templates/medical.js"></script>
+<script src="js/templates/academy.js"></script>
+<script src="js/templates/general.js"></script>
+<script src="js/reservation.js"></script>
+<script src="js/sitegen.js"></script>
+<script>
+  checkAuth();
+
+  // ── 텍스트 크기 조절 ──
+  function setSgFs(fieldId, px) {
+    const el = document.getElementById(fieldId);
+    if (el) el.value = px;
+    // 해당 ctrl 버튼 active 상태 업데이트
+    const ctrl = document.querySelector(`.fs-ctrl[data-field="${fieldId}"]`);
+    if (ctrl) {
+      ctrl.querySelectorAll('.fs-btn').forEach(b => {
+        b.classList.toggle('active', parseInt(b.onclick.toString().match(/\d+/g)?.[1]) === px);
+      });
+      const valEl = ctrl.querySelector('.fs-val');
+      if (valEl) valEl.textContent = px + 'px';
+    }
+  }
+
+  function resetSgFs() {
+    const defaults = {sgFsHero:68, sgFsSection:36, sgFsCard:22, sgFsBody:15, sgFsNav:13, sgFsReview:15, sgFsFooter:13};
+    Object.entries(defaults).forEach(([id, val]) => setSgFs(id, val));
+    // 모든 fs-btn 초기화
+    document.querySelectorAll('.fs-ctrl').forEach(ctrl => {
+      const btns = ctrl.querySelectorAll('.fs-btn');
+      btns.forEach((b, i) => b.classList.toggle('active', i === 1)); // 중간(M) 기본
+      const valEl = ctrl.querySelector('.fs-val');
+      const fieldId = ctrl.dataset.field;
+      if (valEl && fieldId) valEl.textContent = (defaults[fieldId] || 15) + 'px';
+    });
+    showToast('기본값으로 초기화되었습니다.');
+  }
+
+  function onTemplateChange() {
+    const schema = getSchema();
+    const s = schema.formSections;
+
+    // ③ 프로그램 섹션 제목 변경
+    const subHead = document.querySelector('#sgSection_sub h4');
+    if (subHead) subHead.textContent = '③ ' + s.sub.title;
+
+    // 태그 placeholder 변경
+    ['sgP1Tag','sgP2Tag','sgP3Tag'].forEach((id,i) => {
+      const el = document.getElementById(id);
+      if (el) el.placeholder = s.sub.tags[i] || '';
+    });
+
+    // ④ 강사 섹션 — 없으면 숨김
+    const staffSection = document.getElementById('sgSection_staff');
+    if (staffSection) {
+      if (!s.staff) {
+        staffSection.style.display = 'none';
+      } else {
+        staffSection.style.display = '';
+        const staffHead = staffSection.querySelector('h4');
+        if (staffHead) staffHead.textContent = '④ ' + s.staff.title;
+        // 직책 placeholder 변경
+        const roles = s.staff.roles || ['DIRECTOR','MANAGER'];
+        const r1 = document.getElementById('sgI1Role');
+        const r2 = document.getElementById('sgI2Role');
+        if (r1) r1.placeholder = roles[0];
+        if (r2) r2.placeholder = roles[1];
+        // 자격증 라벨
+        document.querySelectorAll('.cert-label').forEach(el => {
+          el.textContent = s.staff.certLabel || '자격증';
+        });
+      }
+    }
+
+    // ⑤ 추가정보 섹션 제목
+    const extraHead = document.querySelector('#sgSection_extra h4');
+    if (extraHead) {
+      const hasStaff = !!s.staff;
+      extraHead.textContent = (hasStaff ? '⑤' : '④') + ' 추가 정보';
+    }
+
+    // 후기 라벨
+    const reviewLabel = document.getElementById('sgReviewLabel');
+    if (reviewLabel && s.reviews) reviewLabel.textContent = s.reviews.label;
+  }
+
+  // 페이지 로드 시 초기화
+  onTemplateChange();
+</script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>예약 관리 — KCCI Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+.rsv-stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.rsv-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+.rsv-label { font-size:11px; color:var(--text3); letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px; }
+.rsv-num { font-size:32px; font-weight:700; line-height:1; }
+.status-pending  { color:var(--amber); }
+.status-confirmed{ color:var(--green); }
+.status-cancelled{ color:var(--red); }
+.status-done     { color:var(--text3); }
+.rsv-row { cursor:pointer; }
+.rsv-row:hover td { background:rgba(255,255,255,.03) !important; }
+.rsv-detail { display:none; background:var(--bg3); }
+.rsv-detail td { padding:16px 20px !important; }
+.rsv-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.site-filter { background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:8px 12px; font-size:13px; font-family:inherit; border-radius:4px; }
+@media(max-width:900px){ .rsv-stat-grid{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <span class="sb-logo-name">KCCI Master</span>
+      <span class="sb-logo-sub">운영 관리 시스템</span>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-sec">메인</div>
+      <a href="dashboard.html" class="sb-item"><span class="ic">📊</span><span>대시보드</span></a>
+      <a href="reservations.html" class="sb-item active"><span class="ic">📅</span><span>예약 관리</span></a>
+      <div class="sb-sec">도구</div>
+      <a href="sitegen.html" class="sb-item"><span class="ic">🚀</span><span>홈페이지 생성</span></a>
+      <a href="settings.html" class="sb-item"><span class="ic">⚙️</span><span>설정</span></a>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-logout" onclick="logout()"><span>🚪</span><span>로그아웃</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">예약 관리</span>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="loadReservations()" style="font-size:12px">🔄 새로고침</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- 통계 -->
+      <div class="rsv-stat-grid">
+        <div class="rsv-card"><div class="rsv-label">전체</div><div class="rsv-num" id="statAll" style="color:var(--gold)">-</div></div>
+        <div class="rsv-card"><div class="rsv-label">대기중</div><div class="rsv-num status-pending" id="statPending">-</div></div>
+        <div class="rsv-card"><div class="rsv-label">확정</div><div class="rsv-num status-confirmed" id="statConfirmed">-</div></div>
+        <div class="rsv-card"><div class="rsv-label">취소</div><div class="rsv-num status-cancelled" id="statCancelled">-</div></div>
+      </div>
+
+      <!-- 필터 -->
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <select class="site-filter" id="siteFilter" onchange="loadReservations()">
+          <option value="">전체 사이트</option>
+        </select>
+        <button class="filter-btn active" onclick="setRsvFilter('all',this)">전체</button>
+        <button class="filter-btn" onclick="setRsvFilter('pending',this)">대기중</button>
+        <button class="filter-btn" onclick="setRsvFilter('confirmed',this)">확정</button>
+        <button class="filter-btn" onclick="setRsvFilter('cancelled',this)">취소</button>
+        <button class="filter-btn" onclick="setRsvFilter('done',this)">완료</button>
+      </div>
+
+      <!-- 목록 -->
+      <div class="card">
+        <div class="card-head">
+          <h3>예약 목록</h3>
+          <span id="rsvCount" style="font-size:12px;color:var(--text3)"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>예약일시</th>
+                <th>이름</th>
+                <th>전화번호</th>
+                <th>사이트</th>
+                <th>상태</th>
+                <th>신청일</th>
+                <th>관리</th>
+              </tr>
+            </thead>
+            <tbody id="rsvTbody">
+              <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">불러오는 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="js/core.js"></script>
+<script>
+checkAuth();
+
+const SUPABASE_URL = 'https://vugtupipbpfundipgcqc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S';
+let currentFilter = 'all';
+let allReservations = [];
+
+const STATUS_MAP = {
+  pending:   { label: '대기중', cls: 'badge-warn' },
+  confirmed: { label: '확정',   cls: 'badge-on' },
+  cancelled: { label: '취소',   cls: 'badge-red' },
+  done:      { label: '완료',   cls: 'badge-off' },
+};
+
+async function sbGet(path) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+    }
+  });
+  if (!res.ok) throw new Error('조회 실패: ' + res.status);
+  return await res.json();
+}
+
+async function sbPatch(path, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('수정 실패: ' + res.status);
+}
+
+async function sbDelete(path) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method: 'DELETE',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+    }
+  });
+  if (!res.ok) throw new Error('삭제 실패: ' + res.status);
+}
+
+async function loadReservations() {
+  const siteId = document.getElementById('siteFilter').value;
+  let query = 'reservations?order=created_at.desc&limit=200';
+  if (siteId) query += '&site_id=eq.' + encodeURIComponent(siteId);
+
+  try {
+    allReservations = await sbGet(query);
+    updateStats();
+    populateSiteFilter();
+    renderReservations();
+  } catch(e) {
+    showToast('❌ 예약 조회 실패: ' + e.message, 'error');
+    document.getElementById('rsvTbody').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--red)">조회 실패: ' + e.message + '</td></tr>';
+  }
+}
+
+function updateStats() {
+  const all = allReservations.length;
+  const pending = allReservations.filter(r => r.status === 'pending').length;
+  const confirmed = allReservations.filter(r => r.status === 'confirmed').length;
+  const cancelled = allReservations.filter(r => r.status === 'cancelled').length;
+  document.getElementById('statAll').textContent = all;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statConfirmed').textContent = confirmed;
+  document.getElementById('statCancelled').textContent = cancelled;
+}
+
+function populateSiteFilter() {
+  const sel = document.getElementById('siteFilter');
+  const current = sel.value;
+  const sites = [...new Set(allReservations.map(r => r.site_id).filter(Boolean))];
+  sel.innerHTML = '<option value="">전체 사이트</option>' +
+    sites.map(s => `<option value="${s}"${s===current?' selected':''}>${s}</option>`).join('');
+}
+
+function setRsvFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderReservations();
+}
+
+function renderReservations() {
+  let list = allReservations;
+  if (currentFilter !== 'all') list = list.filter(r => r.status === currentFilter);
+
+  document.getElementById('rsvCount').textContent = list.length + '건';
+
+  if (list.length === 0) {
+    document.getElementById('rsvTbody').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">예약이 없습니다.</td></tr>';
+    return;
+  }
+
+  document.getElementById('rsvTbody').innerHTML = list.map(r => {
+    const s = STATUS_MAP[r.status] || { label: r.status, cls: 'badge-off' };
+    const createdAt = new Date(r.created_at).toLocaleDateString('ko-KR');
+    return `
+      <tr class="rsv-row" onclick="toggleDetail('detail_${r.id}')">
+        <td><strong>${r.date || '-'}</strong> ${r.time || ''}</td>
+        <td>${r.name || '-'}</td>
+        <td><a href="tel:${(r.phone||'').replace(/-/g,'')}" onclick="event.stopPropagation()" style="color:var(--gold)">${r.phone || '-'}</a></td>
+        <td style="color:var(--text3);font-size:12px">${r.site_id || '-'}</td>
+        <td><span class="badge ${s.cls}">${s.label}</span></td>
+        <td style="color:var(--text3);font-size:12px">${createdAt}</td>
+        <td>
+          <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+            <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="changeStatus('${r.id}','confirmed')">확정</button>
+            <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="changeStatus('${r.id}','cancelled')">취소</button>
+          </div>
+        </td>
+      </tr>
+      <tr class="rsv-detail" id="detail_${r.id}">
+        <td colspan="7">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">문의사항</div><div style="font-size:13px">${r.memo || '없음'}</div></div>
+            <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">신청일시</div><div style="font-size:13px">${new Date(r.created_at).toLocaleString('ko-KR')}</div></div>
+            <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">사이트 ID</div><div style="font-size:12px;font-family:monospace">${r.site_id || '-'}</div></div>
+          </div>
+          <div class="rsv-actions">
+            <button class="btn btn-success" onclick="changeStatus('${r.id}','confirmed')">✅ 확정</button>
+            <button class="btn btn-ghost" onclick="changeStatus('${r.id}','done')">완료 처리</button>
+            <button class="btn btn-danger" onclick="changeStatus('${r.id}','cancelled')">❌ 취소</button>
+            <button class="btn btn-danger" onclick="deleteRsv('${r.id}')">🗑 삭제</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function toggleDetail(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'table-row' ? 'none' : 'table-row';
+}
+
+async function changeStatus(id, status) {
+  try {
+    await sbPatch('reservations?id=eq.' + id, { status });
+    const r = allReservations.find(x => x.id == id);
+    if (r) r.status = status;
+    updateStats();
+    renderReservations();
+    showToast('✅ 상태 변경 완료', 'success');
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+}
+
+async function deleteRsv(id) {
+  if (!confirm('이 예약을 삭제할까요?')) return;
+  try {
+    await sbDelete('reservations?id=eq.' + id);
+    allReservations = allReservations.filter(r => r.id != id);
+    updateStats();
+    renderReservations();
+    showToast('삭제되었습니다.');
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+}
+
+// 초기 로드
+loadReservations();
+
+// 1분마다 자동 새로고침
+setInterval(loadReservations, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,571 @@
+/* ============================================================
+   sitegen.js — 홈페이지 생성 오케스트레이터
+   ============================================================ */
+
+'use strict';
+
+// ── 폼 값 읽기 ──
+function sgV(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function sgImgSrc(val, placeholder) {
+  val = (val || '').trim();
+  if (!val) return placeholder || 'https://placehold.co/1200x800/1B3A5C/C9A040?text=Image';
+  if (val.startsWith('http')) return val;
+  return 'images/' + val;
+}
+
+// ── 업체 선택 → 폼 자동 입력 ──
+function loadClientToForm(id) {
+  if (!id) return;
+  const clients = loadClients();
+  const c = clients.find(x => x.id === id);
+  if (!c) return;
+  const set = (elId, val) => { const el = document.getElementById(elId); if (el && val) el.value = val; };
+  set('sgName', c.name); set('sgOwner', c.owner); set('sgPhone', c.phone);
+  set('sgAddress', c.address); set('sgUrl', c.url); set('sgPlaceId', c.placeId);
+  set('sgBlog', c.blog); set('sgInsta', c.insta);
+  set('sgCloudName', c.cloudName); set('sgUploadPreset', c.uploadPreset);
+
+  // 업종 템플릿 자동 변경
+  if (c.industry) {
+    const tplEl = document.getElementById('sgTemplate');
+    if (tplEl) {
+      tplEl.value = c.industry;
+      onTemplateChange(); // 폼 섹션 동적 업데이트
+    }
+  }
+
+  showToast('✅ ' + c.name + ' 정보 불러오기 완료');
+}
+
+// ── 섹션 아코디언 ──
+function toggleSgSection(head) {
+  head.classList.toggle('open');
+  const body = head.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ── 폼 초기화 ──
+function resetSgForm() {
+  const ids = [
+    'sgName','sgNameEn','sgOwner','sgPhone','sgAddress','sgPlaceId',
+    'sgUrl','sgBlog','sgInsta','sgSlogan','sgAiMemo',
+    'sgH1Img','sgH1Title','sgH2Img','sgH2Title','sgH3Img','sgH3Title',
+    'sgP1Img','sgP1Tag','sgP1Name','sgP1Desc','sgP1Detail',
+    'sgP2Img','sgP2Tag','sgP2Name','sgP2Desc','sgP2Detail',
+    'sgP3Img','sgP3Tag','sgP3Name','sgP3Desc','sgP3Detail',
+    'sgI1Img','sgI1Role','sgI1Name','sgI1Cert',
+    'sgI2Img','sgI2Role','sgI2Name','sgI2Cert',
+    'sgCloudName','sgUploadPreset',
+    'sgOpenHours','sgLastOrder','sgParking',
+    'sgReview1','sgReview1Who','sgReview2','sgReview2Who','sgReview3','sgReview3Who',
+  ];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('sgAdminId').value = 'admin';
+  document.getElementById('sgAdminPw').value = 'thdP1234';
+  document.getElementById('sgResultWrap').style.display = 'none';
+  document.getElementById('sgProgress').style.width = '0%';
+  // 갤러리 초기화
+  sgGalleryItems = [];
+  renderSgGallery();
+  const urlsEl = document.getElementById('sgGalleryUrls');
+  if (urlsEl) urlsEl.value = '[]';
+  // 이미지 미리보기 초기화
+  document.querySelectorAll('[id$="_preview"]').forEach(el => el.style.display = 'none');
+  // 폰트 크기 초기화
+  resetSgFs();
+  const status = document.getElementById('aiStatus');
+  if (status) status.textContent = '';
+  showToast('초기화되었습니다.');
+}
+
+// ── 데이터 객체 수집 ──
+function buildSgDataObj() {
+  return {
+    name:         sgV('sgName') || '업체명',
+    nameEn:       sgV('sgNameEn') || (sgV('sgName') || '업체명').toUpperCase(),
+    owner:        sgV('sgOwner'),
+    phone:        sgV('sgPhone') || '000-0000-0000',
+    address:      sgV('sgAddress'),
+    placeId:      sgV('sgPlaceId'),
+    url:          sgV('sgUrl'),
+    blog:         sgV('sgBlog') || '#',
+    insta:        sgV('sgInsta') || '#',
+    slogan:       sgV('sgSlogan') || '전문가와 함께하는 맞춤 서비스',
+    h1Img:        sgImgSrc(sgV('sgH1Img')),
+    h1Title:      sgV('sgH1Title') || '전문적인|서비스',
+    h2Img:        sgImgSrc(sgV('sgH2Img')),
+    h2Title:      sgV('sgH2Title') || '함께하는|성장',
+    h3Img:        sgImgSrc(sgV('sgH3Img')),
+    h3Title:      sgV('sgH3Title') || '최고의|선택',
+    p1Img:        sgImgSrc(sgV('sgP1Img'), 'https://placehold.co/600x700/1B3A5C/C9A040?text=P1'),
+    p1Tag:        sgV('sgP1Tag') || 'PROGRAM 1',
+    p1Name:       sgV('sgP1Name') || '프로그램 1',
+    p1Desc:       sgV('sgP1Desc') || '프로그램 설명',
+    p1Detail:     sgV('sgP1Detail') || '상세 설명',
+    p2Img:        sgImgSrc(sgV('sgP2Img'), 'https://placehold.co/600x700/1B3A5C/C9A040?text=P2'),
+    p2Tag:        sgV('sgP2Tag') || 'PROGRAM 2',
+    p2Name:       sgV('sgP2Name') || '프로그램 2',
+    p2Desc:       sgV('sgP2Desc') || '프로그램 설명',
+    p2Detail:     sgV('sgP2Detail') || '상세 설명',
+    p3Img:        sgImgSrc(sgV('sgP3Img'), 'https://placehold.co/600x700/1B3A5C/C9A040?text=P3'),
+    p3Tag:        sgV('sgP3Tag') || 'PROGRAM 3',
+    p3Name:       sgV('sgP3Name') || '프로그램 3',
+    p3Desc:       sgV('sgP3Desc') || '프로그램 설명',
+    p3Detail:     sgV('sgP3Detail') || '상세 설명',
+    i1Img:        sgImgSrc(sgV('sgI1Img'), 'https://placehold.co/400x500/1B3A5C/C9A040?text=I1'),
+    i1Role:       sgV('sgI1Role') || 'DIRECTOR',
+    i1Name:       sgV('sgI1Name') || '원장님',
+    i1Cert:       sgV('sgI1Cert') || '',
+    i2Img:        sgImgSrc(sgV('sgI2Img'), 'https://placehold.co/400x500/1B3A5C/C9A040?text=I2'),
+    i2Role:       sgV('sgI2Role') || 'MANAGER',
+    i2Name:       sgV('sgI2Name') || '실장님',
+    i2Cert:       sgV('sgI2Cert') || '',
+    cloudName:    sgV('sgCloudName') || 'https://vugtupipbpfundipgcqc.supabase.co',
+    uploadPreset: sgV('sgUploadPreset') || 'sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S',
+    adminId:      sgV('sgAdminId') || 'admin',
+    adminPw:      sgV('sgAdminPw') || 'thdP1234',
+    openHours:    sgV('sgOpenHours') || '매일 09:00 – 21:00',
+    lastOrder:    sgV('sgLastOrder') || '마감 30분 전',
+    parking:      sgV('sgParking') || '전용 주차 가능',
+    review1:      sgV('sgReview1') || '정말 만족스러운 경험이었어요!',
+    review1who:   sgV('sgReview1Who') || '네이버 방문자',
+    review2:      sgV('sgReview2') || '전문적이고 친절한 서비스 감사합니다.',
+    review2who:   sgV('sgReview2Who') || '네이버 방문자',
+    review3:      sgV('sgReview3') || '다음에도 꼭 이용할게요!',
+    review3who:   sgV('sgReview3Who') || '네이버 방문자',
+    // 갤러리 이미지 (업로드된 것 우선, 없으면 기본 이미지 사용)
+    galleryUrls:  (function(){ try { return JSON.parse(document.getElementById('sgGalleryUrls')?.value || '[]'); } catch(e){ return []; } })(),
+    // 텍스트 크기 설정
+    fsHero:    parseInt(document.getElementById('sgFsHero')?.value   || '68'),
+    fsSection: parseInt(document.getElementById('sgFsSection')?.value || '36'),
+    fsCard:    parseInt(document.getElementById('sgFsCard')?.value    || '22'),
+    fsBody:    parseInt(document.getElementById('sgFsBody')?.value    || '15'),
+    fsNav:     parseInt(document.getElementById('sgFsNav')?.value     || '13'),
+    fsReview:  parseInt(document.getElementById('sgFsReview')?.value  || '15'),
+    fsFooter:  parseInt(document.getElementById('sgFsFooter')?.value  || '13'),
+  };
+}
+
+// ── 제목 파싱 ──
+function titleHtml(t) {
+  const p = t.split('|');
+  return p.length > 1 ? p[0] + '<br><em>' + p[1] + '</em>' : t;
+}
+
+// ── 자격증 리스트 ──
+function certList(txt) {
+  return (txt || '').split('\n').filter(l => l.trim())
+    .map(l => '<li>' + l.trim() + '</li>').join('\n');
+}
+
+// ── 미리보기 ──
+let _pvPages = {};
+let _pvCurrent = 'index.html';
+
+function openSgPreview() {
+  const name = sgV('sgName');
+  if (!name) { showToast('⚠️ 업체명을 먼저 입력하세요.', 'error'); return; }
+
+  const tpl = sgV('sgTemplate') || 'pilates';
+  const d = buildSgDataObj();
+
+  _pvPages = buildAllPages(tpl, d);
+
+  // 탭 생성
+  const tabEl = document.getElementById('pvPageTabs');
+  tabEl.innerHTML = Object.keys(_pvPages).map(p =>
+    `<button onclick="pvLoadPage('${p}')" id="pvTab_${p.replace('.','_')}"
+     style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;">${p}</button>`
+  ).join('');
+
+  pvLoadPage('index.html');
+  document.getElementById('previewModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function pvLoadPage(page) {
+  _pvCurrent = page;
+  const html = _pvPages[page];
+  if (!html) return;
+
+  // 탭 활성화
+  document.querySelectorAll('#pvPageTabs button').forEach(b => {
+    b.style.borderColor = 'var(--border)';
+    b.style.color = 'var(--text2)';
+  });
+  const active = document.getElementById('pvTab_' + page.replace('.','_'));
+  if (active) { active.style.borderColor = 'var(--gold)'; active.style.color = 'var(--gold)'; }
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const frame = document.getElementById('pvFrame');
+  if (frame._blobUrl) URL.revokeObjectURL(frame._blobUrl);
+  frame._blobUrl = url;
+  frame.src = url;
+}
+
+function closeSgPreview() {
+  document.getElementById('previewModal').style.display = 'none';
+  document.body.style.overflow = '';
+  const frame = document.getElementById('pvFrame');
+  if (frame._blobUrl) { URL.revokeObjectURL(frame._blobUrl); frame._blobUrl = null; }
+}
+
+function setPvSize(w) {
+  const wrapper = document.getElementById('pvWrapper');
+  wrapper.style.width = w;
+  wrapper.style.boxShadow = w !== '100%'
+    ? '0 0 0 1px rgba(255,255,255,.1),0 20px 60px rgba(0,0,0,.5)' : 'none';
+}
+
+// ── 모든 페이지 빌드 ──
+function buildAllPages(tpl, d) {
+  const builders = {
+    pilates: {
+      'index.html': () => buildPilatesIndexHtml(d, titleHtml),
+      'program.html': () => buildPilatesProgramHtml(d, certList),
+      'gallery.html': () => buildPilatesGalleryHtml(d),
+      'location.html': () => buildPilatesLocationHtml(d),
+    },
+    cafe: {
+      'index.html': () => buildCafeIndexHtml(d, titleHtml),
+      'menu.html': () => buildCafeMenuHtml(d),
+      'gallery.html': () => buildCafeGalleryHtml(d),
+      'location.html': () => buildCafeLocationHtml(d),
+    },
+    beauty: {
+      'index.html': () => buildBeautyIndexHtml(d, titleHtml),
+      'service.html': () => buildBeautyServiceHtml(d),
+      'gallery.html': () => buildBeautyGalleryHtml(d),
+      'location.html': () => buildBeautyLocationHtml(d),
+    },
+    medical: {
+      'index.html': () => buildMedicalIndexHtml(d, titleHtml),
+      'treatment.html': () => buildMedicalTreatmentHtml(d),
+      'gallery.html': () => buildMedicalGalleryHtml(d),
+      'location.html': () => buildMedicalLocationHtml(d),
+    },
+    academy: {
+      'index.html': () => buildAcademyIndexHtml(d, titleHtml),
+      'course.html': () => buildAcademyCourseHtml(d),
+      'gallery.html': () => buildAcademyGalleryHtml(d),
+      'location.html': () => buildAcademyLocationHtml(d),
+    },
+    general: {
+      'index.html': () => buildGeneralIndexHtml(d, titleHtml),
+      'product.html': () => buildGeneralProductHtml(d),
+      'gallery.html': () => buildGeneralGalleryHtml(d),
+      'location.html': () => buildGeneralLocationHtml(d),
+    },
+  };
+
+  const selected = builders[tpl] || builders.pilates;
+  const pages = {};
+  for (const [name, builder] of Object.entries(selected)) {
+    pages[name] = builder();
+  }
+  pages['admin.html'] = buildAdminHtml(d);
+
+  // 예약 페이지 추가 (업종별)
+  const rsvBuilders = {
+    pilates: () => buildPilatesReservationHtml(d),
+    cafe:    () => buildCafeReservationHtml(d),
+    beauty:  () => buildBeautyReservationHtml(d),
+    medical: () => buildMedicalReservationHtml(d),
+    academy: () => buildAcademyReservationHtml(d),
+    general: () => buildGeneralReservationHtml(d),
+  };
+  if (rsvBuilders[tpl]) pages['reservation.html'] = rsvBuilders[tpl]();
+  return pages;
+}
+
+// ── ZIP 생성 ──
+async function generateSiteZip() {
+  const name = sgV('sgName');
+  if (!name) { showToast('⚠️ 업체명을 입력하세요.', 'error'); return; }
+
+  if (typeof JSZip === 'undefined') {
+    showToast('⚠️ JSZip 로딩 중... 잠시 후 다시 시도하세요.', 'error');
+    return;
+  }
+
+  const prog = document.getElementById('sgProgress');
+  const setP = p => { prog.style.width = p + '%'; };
+  setP(5);
+
+  const tpl = sgV('sgTemplate') || 'pilates';
+  const d = buildSgDataObj();
+
+  const zip = new JSZip();
+  const files = [];
+
+  setP(15);
+  const pages = buildAllPages(tpl, d);
+  let p = 20;
+  const step = 70 / Object.keys(pages).length;
+
+  for (const [filename, html] of Object.entries(pages)) {
+    zip.file(filename, html);
+    files.push({ name: filename, size: html.length });
+    setP(p += step);
+  }
+
+  setP(90);
+
+  const zipName = name.replace(/\s+/g, '_') + '_site.zip';
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = zipName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  setP(100);
+
+  // 결과 표시
+  document.getElementById('sgFileList').innerHTML = files.map(f =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);margin-bottom:2px">
+      <span style="color:var(--green)">✅</span>
+      <span style="font-family:monospace;font-size:13px;flex:1">${f.name}</span>
+      <span style="font-size:11px;color:var(--text3)">${Math.round(f.size/1024)}KB</span>
+    </div>`
+  ).join('');
+  document.getElementById('sgResultWrap').style.display = 'block';
+  showToast('🚀 ' + zipName + ' 생성 완료!', 'success');
+}
+
+// ── admin.html 생성 ──
+function buildAdminHtml(d) {
+  const pwHashMap = {
+    'thdP1234': '55d839730dcd04cccf7d2d8f2c7b24ae9e35e0fccd8519e2a1702789d2c2cbb2',
+  };
+  const pwHash = pwHashMap[d.adminPw] || pwHashMap['thdP1234'];
+  // admin.html은 soyae_site/admin.html 기반 — 핵심 변수만 주입
+  return `<!-- admin.html for ${d.name} -->\n<!-- adminId: ${d.adminId} -->\n<!-- supabaseUrl: ${d.cloudName} -->\n<!-- generated: ${new Date().toISOString()} -->\n`;
+  // 실제 구현은 soyae_site/admin.html을 기반으로 별도 파일로 관리
+}
+
+// ── 업체 목록 셀렉트 채우기 ──
+function populateClientSelect() {
+  const sel = document.getElementById('sgClientSelect');
+  if (!sel) return;
+  const clients = loadClients();
+  sel.innerHTML = '<option value="">— 업체 선택 시 정보 자동 입력 —</option>' +
+    clients.map(c =>
+      `<option value="${c.id}">${c.name}${c.owner ? ' (' + c.owner + ')' : ''}</option>`
+    ).join('');
+}
+
+// ── 페이지 로드 ──
+document.addEventListener('DOMContentLoaded', () => {
+  populateClientSelect();
+  updateAiBadge();
+});
+
+// ── 자동 배포 ──
+async function deployToCloudflare() {
+  const name = sgV('sgName');
+  if (!name) { showToast('⚠️ 업체명을 입력하세요.', 'error'); return; }
+
+  const workerUrl = getWorkerUrl();
+  if (!workerUrl) { showToast('⚠️ 설정 탭에서 Worker URL을 먼저 입력하세요.', 'error'); return; }
+
+  if (typeof JSZip === 'undefined') { showToast('⚠️ JSZip 로딩 중...', 'error'); return; }
+
+  const tpl = sgV('sgTemplate') || 'pilates';
+  const d = buildSgDataObj();
+  const pages = buildAllPages(tpl, d);
+
+  // 프로젝트명 생성 (영문 소문자 + 숫자 + 하이픈)
+  const projectName = (sgV('sgUrl') || name)
+    .toLowerCase()
+    .replace(/\.pages\.dev.*/, '')
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 28);
+
+  const btn = document.getElementById('deployBtn');
+  const statusEl = document.getElementById('deployStatus');
+  if (btn) { btn.disabled = true; btn.textContent = '🚀 배포 중...'; }
+  if (statusEl) statusEl.innerHTML = '';
+
+  const setStatus = (msg, color) => {
+    if (statusEl) statusEl.innerHTML = `<span style="color:${color||'var(--text2)'}">${msg}</span>`;
+  };
+
+  try {
+    setStatus('📦 파일 준비 중...', 'var(--text2)');
+
+    // 파일 객체 생성
+    const files = {};
+    for (const [filename, html] of Object.entries(pages)) {
+      files[filename] = html;
+    }
+
+    setStatus('🌐 Cloudflare에 배포 중... (30초~1분 소요)', 'var(--amber)');
+
+    const res = await fetch(workerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'deploy',
+        projectName,
+        files,
+      })
+    });
+
+    const resText = await res.text();
+    if (!resText) throw new Error('응답이 없습니다.');
+    const data = JSON.parse(resText);
+
+    if (!res.ok || data.error) throw new Error(data.error || '배포 실패');
+
+    const siteUrl = data.url;
+
+    // 업체 목록에 URL 자동 저장
+    const clients = loadClients();
+    const clientId = document.getElementById('sgClientSelect')?.value;
+    if (clientId) {
+      const idx = clients.findIndex(c => c.id === clientId);
+      if (idx !== -1) {
+        clients[idx].url = siteUrl;
+        saveClients(clients);
+      }
+    }
+
+    setStatus(`✅ 배포 완료!<br><a href="${siteUrl}" target="_blank" style="color:var(--gold);font-weight:600">${siteUrl}</a><br><small style="color:var(--text3)">admin.html: ${siteUrl}/admin.html</small>`, 'var(--green)');
+    showToast('🚀 배포 완료! ' + siteUrl, 'success');
+
+    // 결과 표시
+    document.getElementById('sgResultWrap').style.display = 'block';
+
+  } catch(e) {
+    setStatus('❌ 배포 실패: ' + e.message, 'var(--red)');
+    showToast('❌ 배포 실패: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🌐 Cloudflare 자동 배포'; }
+  }
+}
+
+// ── 이미지 업로드 (Supabase Storage) ──
+const SB_URL = 'https://vugtupipbpfundipgcqc.supabase.co';
+const SB_KEY = 'sb_publishable_tJhW52aAlbyM_0A5_J-yqA_OTIIhV-S';
+const SB_BUCKET = 'site-images';
+
+async function uploadToSb(file) {
+  const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+  const fileName = Date.now() + '_' + Math.random().toString(36).substr(2,6) + '.' + ext;
+  const res = await fetch(SB_URL + '/storage/v1/object/' + SB_BUCKET + '/' + fileName, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': file.type || 'image/jpeg',
+      'x-upsert': 'true',
+    },
+    body: file,
+  });
+  if (!res.ok) throw new Error('업로드 실패: ' + res.status);
+  return SB_URL + '/storage/v1/object/public/' + SB_BUCKET + '/' + fileName;
+}
+
+// 단일 이미지 업로드 → 해당 input에 URL 자동 입력
+async function uploadSgImg(input, fieldId) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const el = document.getElementById(fieldId);
+  const preview = document.getElementById(fieldId + '_preview');
+  const previewImg = document.getElementById(fieldId + '_previewImg');
+
+  if (el) el.value = '⏳ 업로드 중...';
+
+  try {
+    const url = await uploadToSb(file);
+    if (el) el.value = url;
+
+    // 미리보기 표시
+    if (preview && previewImg) {
+      previewImg.src = url;
+      preview.style.display = 'block';
+    }
+    showToast('✅ 업로드 완료!', 'success');
+  } catch(e) {
+    if (el) el.value = '';
+    showToast('❌ 업로드 실패: ' + e.message, 'error');
+  }
+  input.value = '';
+}
+
+// 갤러리 다중 이미지 업로드
+let sgGalleryItems = [];
+
+async function uploadSgGallery(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+
+  const max = 12;
+  if (sgGalleryItems.length >= max) {
+    showToast('갤러리는 최대 ' + max + '장까지 가능합니다.', 'error');
+    return;
+  }
+
+  const remaining = max - sgGalleryItems.length;
+  const toUpload = files.slice(0, remaining);
+
+  showToast('🖼 ' + toUpload.length + '장 업로드 중...');
+
+  let done = 0;
+  for (const file of toUpload) {
+    try {
+      const url = await uploadToSb(file);
+      sgGalleryItems.push({ url, caption: file.name.replace(/\.[^.]+$/, '') });
+      done++;
+      renderSgGallery();
+      showToast('✅ ' + done + '/' + toUpload.length + ' 업로드 완료');
+    } catch(e) {
+      showToast('❌ ' + file.name + ' 실패', 'error');
+    }
+  }
+
+  // hidden input에 URL 배열 저장
+  const urlsEl = document.getElementById('sgGalleryUrls');
+  if (urlsEl) urlsEl.value = JSON.stringify(sgGalleryItems.map(i => i.url));
+
+  input.value = '';
+}
+
+function renderSgGallery() {
+  const grid = document.getElementById('sgGalleryGrid');
+  if (!grid) return;
+  grid.innerHTML = sgGalleryItems.map((item, i) =>
+    `<div style="position:relative;aspect-ratio:1;overflow:hidden;border-radius:4px;border:1px solid var(--border)">
+      <img src="${item.url}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="removeSgGalleryItem(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border:none;color:#fff;font-size:12px;width:20px;height:20px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">✕</button>
+    </div>`
+  ).join('');
+}
+
+function removeSgGalleryItem(i) {
+  sgGalleryItems.splice(i, 1);
+  renderSgGallery();
+  const urlsEl = document.getElementById('sgGalleryUrls');
+  if (urlsEl) urlsEl.value = JSON.stringify(sgGalleryItems.map(item => item.url));
+}
+
+// ── 폰트 크기 CSS 변수 생성 (모든 템플릿 공통) ──
+function buildFontSizeCss(d) {
+  return `:root {
+  --fs-hero:    ${d.fsHero    || 68}px;
+  --fs-section: ${d.fsSection || 36}px;
+  --fs-card:    ${d.fsCard    || 22}px;
+  --fs-body:    ${d.fsBody    || 15}px;
+  --fs-nav:     ${d.fsNav     || 13}px;
+  --fs-review:  ${d.fsReview  || 15}px;
+  --fs-footer:  ${d.fsFooter  || 13}px;
+}`;
+}
